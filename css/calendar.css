@@ -1,0 +1,382 @@
+/* --- 1. 기본 스타일 및 레이아웃 --- */
+body {
+    margin: 0; 
+    padding: 0;
+    background-color: #ffffff;
+    font-family: 'Pretendard', -apple-system, sans-serif;
+    display: flex; 
+    flex-direction: column; 
+    align-items: center;
+    min-height: 100vh;
+    overflow-y: auto; 
+}
+
+.main-container { 
+    width: 100%; 
+    max-width: 400px; 
+    margin: 0 auto; 
+    display: flex;
+    flex-direction: column; 
+    box-sizing: border-box; 
+}
+
+/* --- 2. 캘린더 헤더 --- */
+.calendar-header {
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+    gap: 30px; 
+    padding: 30px 0; 
+    width: 100%;
+}
+
+.month-btn {
+    background: none;
+    border: none;
+    box-shadow: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    color: #000;
+    font-size: 1.5rem;
+    padding: 5px;
+    transition: all 0.2s;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+.month-btn:active { transform: scale(0.9); }
+
+#current-month-year { 
+    font-size: 20px; 
+    font-weight: 800; 
+    color: #000; 
+    min-width: 130px;
+    text-align: center;
+    cursor: pointer;
+}
+
+/* --- 3. 캘린더 그리드 --- */
+.weekdays { 
+    display: grid; 
+    grid-template-columns: repeat(7, 1fr); 
+    width: 90%; 
+    text-align: center; 
+    font-weight: 700; 
+    font-size: 14px; 
+    margin: 0 auto 10px;
+    color: #333;
+}
+
+.calendar-grid { 
+    display: grid; 
+    grid-template-columns: repeat(7, 1fr); 
+    gap: 8px; 
+    width: 90%; 
+    margin: 0 auto 20px;
+}
+
+.day { 
+    aspect-ratio: 1; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    font-size: 14px; 
+    font-weight: 700; 
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
+    position: relative;
+    color: #333;
+    z-index: 1;
+}
+
+.day.attended {
+    color: #ffffff !important; 
+    font-weight: 800;
+    text-shadow: none !important; 
+}
+
+.day.attended::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 85%; 
+    height: 85%;
+    background-image: url('../img/clover.png'); 
+    background-size: 100%; 
+    background-repeat: no-repeat;
+    background-position: center;
+    border-radius: 50%; 
+    z-index: -1;
+    animation: cloverFadeIn 0.3s ease-out;
+}
+
+@keyframes cloverFadeIn {
+    from { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+    to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+.day.active { border-radius: 50%; }
+.day.active:not(.attended) {
+    background-color: #000 !important;
+    color: #fff !important;
+}
+.day.active.attended {
+    border: 0.8px solid #000; 
+}
+
+.day.empty { cursor: default; }
+
+/* 🛠️ 겹침 해결 포인트 1: 구분선 설정 초기화 */
+.separator { 
+    width: 90%; 
+    border: 0; 
+    border-top: 0.8px solid rgba(0,0,0,0.1); 
+    /* 기존 margin: 30px auto 20px -> 위 20px, 아래 5px로 축소 */
+    margin: 20px auto 5px !important; 
+    display: block;
+    clear: both;
+}
+
+/* --- 6. 그룹 선택 카테고리 (🛠️ 겹침 해결 포인트 2) --- */
+/* --- 6. 그룹 선택 카테고리 --- */
+/* --- 6. 그룹 선택 카테고리 --- */
+.group-category-container {
+    width: 90%;
+    margin: 1px auto;      /* 위아래 마진을 주어 구분선 및 리스트와 간격 확보[cite: 1] */
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 15px 5px;      /* 상하 패딩을 충분히 주어 버튼 그림자와 테두리 보호[cite: 1] */
+    scrollbar-width: none; 
+    -webkit-overflow-scrolling: touch;
+    position: relative; 
+    z-index: 10;            /* 하단 요소보다 위에 오도록 설정[cite: 1] */
+    min-height: 32px;       /* 최소 높이를 지정하여 영역 확보[cite: 1] */
+}
+
+.category-item {
+    flex: 0 0 auto;
+    padding: 0 20px;        /* 좌우 여백 확대 */
+    height: 40px;           /* 높이를 명확하게 지정[cite: 1] */
+    border-radius: 20px;
+    background-color: #eee;
+    font-size: 14px;        /* 가독성을 위해 살짝 키움 */
+    font-weight: 700;
+    color: #444 !important;
+    
+    display: inline-flex;
+    align-items: center;    
+    justify-content: center; 
+    white-space: nowrap; 
+    box-sizing: border-box; 
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+}
+.group-category-container::-webkit-scrollbar {
+    display: none;
+}
+
+.category-item.active {
+    background-color: #fffde7;
+    color: #111 !important;
+    border-color: #fdd835;
+    box-shadow: 0 2px 8px rgba(253, 216, 53, 0.2);
+}
+
+/* --- 4. 하단 노래 리스트 카드 --- */
+/* --- 4. 하단 노래 리스트 카드 --- */
+/* --- 4. 하단 노래 리스트 카드 --- */
+#selected-song-list { 
+    width: 100%; 
+    padding-top: 0px;      /* 카테고리와 겹치지 않게 상단 여백 추가[cite: 1] */
+    padding-bottom: 150px; 
+    position: relative;
+    z-index: 1;
+}
+
+.video-scroll-wrapper { 
+    display: flex; 
+    overflow-x: auto; 
+    width: 90%; 
+    margin: 15px auto 20px; /* 위쪽 마진(15px)을 추가하여 카테고리와 분리[cite: 1] */
+    border: 0.5px solid rgba(61, 70, 81, 0.568); 
+    border-radius: 20px; 
+    background: #fff;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); /* 입체감 부여 */
+}
+
+.video-scroll-wrapper::-webkit-scrollbar { display: none; }
+
+.info-area { 
+    flex: 0 0 100%; 
+    width: 100%;
+    background: #fdfdfd; 
+    display: flex; 
+    flex-direction: column; 
+    justify-content: center; 
+    padding: 25px; 
+    box-sizing: border-box; 
+    scroll-snap-align: start;
+}
+
+.info-area .user { font-size: 12px; color: #888; margin-bottom: 6px; display: block; }
+.info-area .msg { font-weight: 700; font-size: 15px; line-height: 1.4; color: #000; }
+
+.thumb-area { 
+    flex: 0 0 100%; 
+    width: 100%;
+    position: relative; 
+    background: #000; 
+    scroll-snap-align: start;
+}
+.thumb-area img { width: 100%; height: 188px; object-fit: cover; display: block; }
+
+.video-overlay {
+    position: absolute; 
+    bottom: 0; left: 0; width: 100%;
+    padding: 15px; 
+    background: linear-gradient(transparent, rgba(0,0,0,0.8));
+    color: white; 
+    box-sizing: border-box;
+    pointer-events: none;
+}
+.video-overlay .title { font-size: 14px; font-weight: 700; line-height: 1.3; margin-bottom: 1px;}
+.video-date-style { font-size: 13px; color: rgb(236, 236, 236); margin-left: 3px; }
+
+/* 래퍼 스타일 */
+.category-select-wrapper {
+    width: 82%;
+    margin: 10px auto;
+    padding: 10px 15px;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    position: relative; /* 드롭다운 위치 기준 */
+}
+
+.current-category {
+    font-size: 15px;
+    font-weight: 700;
+    color: #333;
+}
+
+.select-arrow {
+    font-size: 14px;
+    color: #888;
+    transition: transform 0.3s;
+}
+
+/* 드롭다운 메뉴 스타일 */
+.category-dropdown-menu {
+    display: none; /* 기본적으로 숨김 */
+    position: absolute;
+    top: 110%; /* 선택창 바로 아래 */
+    left: 0;
+    width: 100%;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    z-index: 100;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.category-dropdown-menu.show {
+    display: block;
+}
+
+/* 드롭다운 개별 아이템 */
+.dropdown-item {
+    padding: 12px 15px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: 1px solid #f9f9f9;
+}
+
+.dropdown-item:last-child { border-bottom: none; }
+.dropdown-item:active { background-color: #f5f5f5; }
+
+.video-scroll-wrapper {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory; /* 가로 방향 자석 효과 활성화 */
+    -webkit-overflow-scrolling: touch; /* iOS에서 부드러운 스크롤 보장 */
+}
+
+.thumb-area, .info-area {
+    flex: 0 0 100%; /* 각 영역이 전체 너비를 차지하게 설정 */
+    scroll-snap-align: start; /* 각 영역의 시작점에 자석 효과 적용 */
+}
+
+/* 정보 영역의 한마디 스타일 */
+.user-comment {
+    display: block;
+    font-size: 18px;    /* 글씨 크기 키움 (기존 14px에서 변경) */
+    font-weight: 600;   /* 글씨 두께 강조 */
+    color: #333;
+    margin-top: 8px;
+    margin-bottom: 4px;
+    line-height: 1.4;
+    word-break: break-all; /* 긴 문장 자동 줄바꿈 */
+}
+
+/* 썸네일 내부 오버레이 한마디 스타일[cite: 2] */
+.video-date-style {
+    font-size: 16px;    /* 썸네일 안의 글씨도 키움 */
+    font-weight: 500;
+    margin-top: 10px;   /* 제목과의 간격 넓히기 [요청사항 3번 반영] */
+}
+
+/* 전체 헤더 컨테이너 */
+.calendar-header-container {
+    padding: 10px 15px;
+    background-color: #fff;
+}
+
+/* 1층: 뒤로가기 버튼 줄 (다른 요소 없이 비움) */
+.back-button-row {
+    display: flex;
+    align-items: center;
+    height: 40px; /* 줄 높이 확보 */
+    margin-bottom: 5px;
+}
+
+.back-to-main {
+    font-size: 22px;
+    color: #333;
+    cursor: pointer;
+    padding: 5px;
+}
+
+/* 2층: 월 이동 컨트롤러 줄 */
+.month-control-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px; /* 화살표와 날짜 사이 간격 */
+    height: 40px;
+}
+
+.month-btn {
+    font-size: 18px;
+    color: #333;
+    cursor: pointer;
+    padding: 10px;
+}
+
+#current-month-year {
+    font-size: 20px;
+    font-weight: bold;
+    color: #333;
+    min-width: 120px; /* 날짜 변경 시 흔들림 방지 */
+    text-align: center;
+}

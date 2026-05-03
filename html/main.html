@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>오늘의 노래 추천</title>
+    <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+    <div class="main-container">
+        <h2 class="title">오늘의 노래를<br>추천해주세요.</h2>
+        <div class="content-section">
+            <div class="input-card card">
+                <div class="album-preview"><img src="" id="main-image"></div>
+                <div class="input-group">
+                    <textarea id="comment-input" placeholder="오늘의 한 마디 작성하기" class="text-input"></textarea>
+                    <input type="text" id="url-input" placeholder="유튜브 URL 입력하기" class="text-input">
+                </div>
+                <!-- JS에서 이벤트를 처리하므로 onclick 속성을 제거함[cite: 7, 8] -->
+                <button id="action-btn" class="submit-btn">이 노래로 추천하기</button>
+            </div>
+        </div>
+    </div>
+    <script src="../js/main.js"></script>
+</body>
+</html>

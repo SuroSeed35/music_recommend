@@ -1,0 +1,204 @@
+create database music_recommend;
+
+CREATE TABLE users (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,      -- 유저 고유 ID (PK)
+    login_id VARCHAR(50) NOT NULL UNIQUE,         -- 로그인 아이디
+    email VARCHAR(100) NOT NULL UNIQUE,           -- 이메일
+    password VARCHAR(255) NOT NULL,               -- 암호화된 비밀번호
+    current_song_id INT,                          -- 현재 설정된 노래 ID (FK)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP -- 가입일
+);
+
+CREATE TABLE songs (
+    song_id INT AUTO_INCREMENT PRIMARY KEY,       -- 노래 고유 ID (PK)
+    youtube_url VARCHAR(255) NOT NULL,            -- 유튜브 URL
+    title VARCHAR(200) NOT NULL,                  -- 노래 제목
+    daily_comment VARCHAR(255),                   -- 오늘의 한마디
+    thumbnail_img VARCHAR(255),                   -- 썸네일 이미지 경로/URL
+    log_date DATE DEFAULT (CURRENT_DATE),          -- 등록 날짜
+    log_time TIME DEFAULT (CURRENT_TIME)           -- 등록 시간
+);
+
+CREATE TABLE friends (
+    friendship_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,                         -- 본인 ID
+    friend_id INT NOT NULL,                       -- 친구 유저 ID
+    status ENUM('pending', 'accepted') DEFAULT 'pending', -- 친구 상태 (요청중, 수락됨)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (friend_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+-- 테이블 이름을 club_groups로 변경한 버전
+CREATE TABLE club_groups (
+    group_id INT AUTO_INCREMENT PRIMARY KEY,
+    group_name VARCHAR(100) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE group_members (
+    member_id INT AUTO_INCREMENT PRIMARY KEY,
+    group_id INT NOT NULL,
+    user_id INT NOT NULL,
+    role ENUM('admin', 'member') DEFAULT 'member',
+    joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (group_id) REFERENCES club_groups(group_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+-- 1. 노래 정보 테이블 (Songs)
+-- 프론트엔드의 dataset.link, dataset.song, dataset.thumb 데이터가 이곳에 저장됩니다.
+CREATE TABLE songs (
+    song_id INT AUTO_INCREMENT PRIMARY KEY,       -- 노래 고유 ID 
+    youtube_url VARCHAR(255) NOT NULL,            -- 유튜브 URL 
+    title VARCHAR(200) NOT NULL,                  -- 노래 제목 
+    daily_comment VARCHAR(255),                   -- 오늘의 한마디 
+    thumbnail_img VARCHAR(255),                   -- 썸네일 이미지 경로/URL [cite: 4]
+    log_date DATE DEFAULT (CURRENT_DATE),         -- 등록 날짜 [cite: 4]
+    log_time TIME DEFAULT (CURRENT_TIME)          -- 등록 시간 [cite: 4]
+);
+
+-- 2. 유저 테이블 (Users)
+-- 기존 로그인 정보에 프론트엔드 UI용 데이터(username, bio, dday)를 추가했습니다.
+CREATE TABLE users (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,      -- 유저 고유 ID [cite: 1]
+    login_id VARCHAR(50) NOT NULL UNIQUE,        -- 로그인 아이디 [cite: 1]
+    email VARCHAR(100) NOT NULL UNIQUE,          -- 이메일 [cite: 1]
+    password VARCHAR(255) NOT NULL,              -- 암호화된 비밀번호 [cite: 1]
+    
+    -- 프론트엔드 매칭용 추가 컬럼
+    username VARCHAR(50) NOT NULL,               -- 화면에 표시될 이름 (dataset.name)
+    bio VARCHAR(255),                            -- 상태 메시지 (dataset.bio)
+    dday VARCHAR(50),                            -- 디데이 (dataset.dday)
+    
+    current_song_id INT,                         -- 현재 설정된 노래 ID [cite: 1]
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- 가입일 [cite: 2]
+    FOREIGN KEY (current_song_id) REFERENCES songs(song_id) ON DELETE SET NULL
+);
+
+-- 3. 친구 관계 테이블 (Friends)
+-- friend_list.js의 스와이프 수락 로직을 이 테이블의 status 값 변경으로 처리합니다.
+CREATE TABLE friends (
+    friendship_id INT AUTO_INCREMENT PRIMARY KEY, -- [cite: 5]
+    user_id INT NOT NULL,                         -- 본인 ID [cite: 5]
+    friend_id INT NOT NULL,                       -- 친구 유저 ID [cite: 5]
+    status ENUM('pending', 'accepted') DEFAULT 'pending', -- 친구 상태 [cite: 5]
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- [cite: 5]
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE, -- [cite: 6]
+    FOREIGN KEY (friend_id) REFERENCES users(user_id) ON DELETE CASCADE, -- [cite: 6]
+    UNIQUE KEY unique_friendship (user_id, friend_id) -- 중복 친구 요청 방지
+);
+
+-- 4. 그룹 테이블 (Club Groups)
+-- 기존 club_groups 테이블명을 그대로 사용합니다.
+CREATE TABLE club_groups (
+    group_id INT AUTO_INCREMENT PRIMARY KEY,     -- [cite: 7]
+    group_name VARCHAR(100) NOT NULL,            -- [cite: 7]
+    description TEXT,                            -- [cite: 7]
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP -- [cite: 7]
+);
+
+-- 1. 먼저 데이터 상태 확인
+SELECT user_id, login_id, username, bio, dday FROM users;
+
+-- 2. 데이터가 비어있다면 업데이트 (예시 데이터)
+UPDATE users SET 
+    username = '홍길동', 
+    bio = '오늘도 즐거운 하루!', 
+    dday = '253',
+    current_song_id = 1 
+WHERE login_id = 'test1';
+
+-- DB 생성
+CREATE DATABASE IF NOT EXISTS music_recommend;
+USE music_recommend;
+
+-- 노래 정보 테이블
+CREATE TABLE IF NOT EXISTS songs (
+    song_id INT AUTO_INCREMENT PRIMARY KEY,
+    youtube_url VARCHAR(255) NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    daily_comment VARCHAR(255),
+    thumbnail_img VARCHAR(255),
+    log_date DATE DEFAULT (CURRENT_DATE),
+    log_time TIME DEFAULT (CURRENT_TIME)
+);
+
+-- 유저 테이블 (노래 ID를 참조)
+CREATE TABLE IF NOT EXISTS users (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    login_id VARCHAR(50) NOT NULL UNIQUE,
+    username VARCHAR(50) NOT NULL,
+    current_song_id INT,
+    FOREIGN KEY (current_song_id) REFERENCES songs(song_id) ON DELETE SET NULL
+);
+
+-- 테스트 데이터 삽입
+INSERT INTO songs (youtube_url, title, daily_comment, thumbnail_img) 
+VALUES ('https://youtu.be/example', '첫 번째 추천 곡', '기분이 좋아지는 노래입니다.', 'https://img.youtube.com/vi/example/0.jpg');
+
+INSERT INTO users (login_id, username, current_song_id) 
+VALUES ('user01', '홍길동', 1);
+
+-- 노래 정보 테이블 (기존 스키마 유지 및 확장)
+CREATE TABLE IF NOT EXISTS songs (
+    song_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,                                  -- 등록한 유저 ID
+    youtube_url VARCHAR(255) NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    daily_comment VARCHAR(255),
+    thumbnail_img VARCHAR(255),
+    log_date DATE DEFAULT (CURRENT_DATE),
+    log_time TIME DEFAULT (CURRENT_TIME),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS songs (
+    song_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    youtube_url VARCHAR(255) NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    daily_comment VARCHAR(255),
+    thumbnail_img VARCHAR(255),
+    log_date DATE NOT NULL,
+    log_time TIME NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS songs (
+    song_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    youtube_url VARCHAR(255) NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    daily_comment VARCHAR(255),
+    thumbnail_img VARCHAR(255),
+    log_date DATE NOT NULL,
+    log_time TIME NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+-- 유저 테이블 생성
+CREATE TABLE IF NOT EXISTS users (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL
+);
+
+-- 캘린더에 표시될 노래 테이블 생성
+CREATE TABLE IF NOT EXISTS songs (
+    song_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    youtube_url VARCHAR(255) NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    daily_comment VARCHAR(255),
+    thumbnail_img VARCHAR(255),
+    log_date DATE NOT NULL,
+    log_time TIME NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+ALTER TABLE users ADD COLUMN main_group_id INT NULL;
+
+/* songs 테이블에 생성 날짜 컬럼을 추가합니다. */
+ALTER TABLE songs 
+ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;

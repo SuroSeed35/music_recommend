@@ -1,0 +1,106 @@
+/* 전체 초기화 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Pretendard", -apple-system, sans-serif;
+}
+
+/* 배경 설정: 화면 정중앙 배치 */
+body {
+    background-color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+/* 메인 박스: 크기 줄임 및 중앙 정렬 */
+.container {
+    width: 100%;
+    max-width: 340px; 
+    padding: 40px 20px;
+    text-align: center;
+}
+
+/* 상단 타이틀 */
+.welcome-title {
+    font-size: 32px;
+    font-weight: 600;
+    margin-bottom: 40px;
+    min-height: 40px; 
+}
+
+/* 입력창 그룹 */
+.input-group {
+    margin-bottom: 15px;
+    text-align: left; 
+}
+
+/* 비밀번호 확인 칸만 위쪽 간격 줄이기 */
+.password-confirm {
+    margin-top: -10px;
+}
+
+/* 라벨 스타일 */
+.input-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+/* 입력창 스타일 */
+.input-group input {
+    width: 100%;        
+    padding: 14px 18px; 
+    border: 1px solid #d1d1d1;
+    border-radius: 4px; 
+    font-size: 15px;
+    outline: none;
+    transition: all 0.2s ease; 
+}
+
+/* 입력창 포커스 효과 */
+.input-group input:focus {
+    border-color: #000;
+    transform: translateY(-2px); 
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+}
+
+/* 버튼 스타일 */
+.submit-btn {
+    width: 100%;
+    padding: 16px;
+    background-color: #000;
+    color: #fff;
+    border: none;
+    border-radius: 40px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: background 0.3s ease;
+}
+
+.submit-btn:hover {
+    background-color: #333;
+}
+
+/* 하단 링크 */
+.footer-links {
+    margin-top: 25px;
+}
+
+.footer-links p {
+    font-size: 13px;
+    color: #888;
+}
+
+.footer-links a {
+    color: #000;
+    text-decoration: none;
+    font-weight: bold;
+    margin-left: 5px;
+}

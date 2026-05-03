@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Page</title>
+    <link rel="stylesheet" href="../css/mypage.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="mobile-container">
+        <div class="back-button-row">
+            <i class="fas fa-chevron-left back-to-main" id="backToMain"></i>
+        </div>
+        <section class="profile-section">
+            <div class="user-info">
+                <h2 id="displayId" style="margin-bottom: 0;">로드 중...</h2>
+                <!-- 🔥 margin-top을 5px로 수정하여 닉네임과 적당한 간격을 두었습니다. -->
+                <p id="displayLoginId" style="font-size: 13px; color: #868e96; margin-top: 5px; margin-bottom: 12px; font-weight: 500;">@아이디</p>
+                <p id="displayStatus"></p>
+            </div>
+            <button id="editBtn" class="primary-btn black-btn">수정하기</button>
+        </section>
+
+        <div class="dday-banner" id="ddayBanner" style="cursor: pointer;">
+            <div id="ddayContent">
+                <h1 class="dday-text">D-Day 설정 중</h1>
+            </div>
+            <div id="attendanceContent" class="hidden">
+                <div class="scroll-wrapper">
+                    <div id="contributionGrid" class="contribution-grid"></div>
+                </div>
+            </div>
+        </div>
+
+        <hr class="divider">
+
+        <section class="calendar-section">
+            <div class="calendar-header">
+                <button id="prevWeek" class="nav-btn">&lt;</button>
+                <h3 id="calendarMonth"></h3>
+                <button id="nextWeek" class="nav-btn">&gt;</button>
+            </div>
+            <div class="week-display">
+                <div class="day-labels">
+                    <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+                </div>
+                <div id="weekDays" class="days-container"></div>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <section id="recommendationCard" class="info-card">
+            <div class="card-inner">
+                <a href="#" target="_blank" class="video-link" id="videoLink">
+                    <div class="video-thumbnail">
+                        <img src="" alt="Thumbnail" id="thumbImg">
+                    </div>
+                </a>
+                
+                <div class="info-box">
+                    <p id="recommendMsg">노래 정보를 불러오는 중...</p>
+                </div>
+
+                <div class="url-copy-box">
+                    <input type="text" id="youtubeUrl" value="" readonly>
+                    <button id="copyBtn" class="copy-link-text">복사</button>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- editModal 내부 수정[cite: 11] -->
+    <div id="editModal" class="modal-overlay hidden">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2>프로필 수정</h2>
+                <button class="close-edit-x-btn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <!-- editModal 내부 modal-body 부분 수정 -->
+            <div class="modal-body">
+                <div class="edit-row">
+                    <label>닉네임</label>
+                    <input type="text" id="editUsername" class="edit-input" placeholder="닉네임">
+                </div>
+                
+                <div class="edit-row">
+                    <label>아이디</label>
+                    <input type="text" id="editLoginId" class="edit-input" placeholder="아이디">
+                </div>
+                
+                <div class="edit-row">
+                    <label>소개글</label>
+                    <input type="text" id="editStatus" class="edit-input" placeholder="소개글">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="saveBtn" class="confirm-btn">저장하기</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirmModal" class="modal-overlay hidden">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2>알림</h2>
+                <button class="close-x-btn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <p id="modalMsg">내용</p>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn confirm-btn">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/mypage.js"></script>
+</body>
+</html>

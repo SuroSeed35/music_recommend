@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>메인-캘린더</title>
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/calendar.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="main-container">
+        <!-- calendar_3.html 수정 -->
+        <header class="calendar-header-container">
+            <!-- 1층: 뒤로가기 버튼만 있는 줄 -->
+            <div class="back-button-row">
+                <i class="fas fa-chevron-left back-to-main" id="backToMain"></i>
+            </div>
+            
+            <!-- 2층: 월 이동 버튼과 날짜가 있는 줄 -->
+            <div class="month-control-row">
+                <i id="prev-month" class="fas fa-chevron-left month-btn"></i>
+                <span id="current-month-year"></span>
+                <i id="next-month" class="fas fa-chevron-right month-btn"></i>
+            </div>
+        </header>
+
+        <div class="weekdays">
+            <div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div>
+        </div>
+
+        <div id="calendar-grid" class="calendar-grid"></div>
+        <!-- 구분선 아래에 추가 -->
+        <hr class="separator">
+
+        <div class="category-select-wrapper">
+            <div id="current-category-name" class="current-category">전체</div>
+            <i class="fas fa-chevron-down select-arrow"></i>
+            
+            <!-- 실제 클릭 시 나타날 드롭다운 메뉴 -->
+            <div id="category-dropdown" class="category-dropdown-menu">
+                <!-- js에서 항목이 생성됩니다 -->
+            </div>
+        </div>
+        <div id="selected-song-list" class="song-card-container"></div>
+    </div>
+    <script src="../js/calendar.js"></script>
+</body>
+</html>

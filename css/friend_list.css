@@ -1,0 +1,408 @@
+
+
+:root {
+    --yellow-grad: linear-gradient(90deg, #FFFFD0 0%, #FFEB94 51%, #FFE4AF 99%);
+    --white-grad: linear-gradient(90deg, #FDFDFD 0%, #F9F9F9 51%, #F9F9F9 99%);
+    --green-grad: #C2F0C2;
+    --btn-active-bg: #D9EFFF;
+    --border-color: #dbdbdb;
+}
+
+body { margin: 0; padding: 0; font-family: 'NanumSquareRound', sans-serif; background-color: #f0f0f0; display: flex; justify-content: center; overflow: hidden;}
+.mobile-container { width: 100%; max-width: 400px; height: 100vh; background-color: #ffffff; padding: 20px; box-sizing: border-box; overflow-y: scroll; scrollbar-width: none; position: relative;}
+.mobile-container::-webkit-scrollbar { display: none;}
+
+/* --- 화면 전환 애니메이션 --- */
+.view-section {
+    display: none;
+    opacity: 0;
+    transform: translateY(15px);
+}
+
+.view-section.active-view {
+    display: block;
+    animation: slideUpFade 0.4s ease forwards;
+}
+
+@keyframes slideUpFade {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* (이하 기존 스타일 유지) */
+.main-title { text-align: center; font-size: 32px; font-weight: 900; margin: 10px 0 25px 0;}
+.add-friend-btn { background: #fff; border: 1px solid var(--border-color); border-radius: 20px; padding: 6px 12px; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 5px; cursor: pointer; transition: all 0.4s ease; white-space: nowrap;}
+.add-friend-btn.active-btn { background-color: var(--btn-active-bg) !important; border-color: #b8d9f1;}
+.section-title { 
+    font-size: 14px;        /* 15px에서 14px로 줄임 */
+    font-weight: 700; 
+    margin: 15px 0 10px 5px; 
+    cursor: pointer;
+    color: #555;            /* 색상을 조금 부드럽게 변경 */
+}
+.list-container { display: flex; flex-direction: column; gap: 12px;}
+.list-container {
+    padding-left: 7px;  /* 좌측 여백 추가 */
+    padding-right: 7px; /* 우측 여백 추가 */
+    box-sizing: border-box; /* 패딩이 전체 너비에 포함되도록 설정 */
+}
+.friend-item { 
+    border: 1px solid var(--border-color); 
+    border-radius: 21px; 
+    padding: 17px 24px;     /* 패딩 살짝 조정 */
+    font-size: 16px;        /* 20px에서 16px로 줄임 */
+    font-weight: 700;       /* 800에서 700으로 조정 */
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    position: relative; 
+    overflow: hidden; 
+    z-index: 1; 
+    background: #fff; 
+    cursor: pointer; 
+    transition: transform 0.1s linear;
+}
+.highlight-yellow { background: var(--yellow-grad) !important;}
+.highlight-white { background: var(--white-grad);}
+.divider { border: 0; border-top: 1px solid #eeeeee; margin: 25px 5px;}
+.search-input { width: 100%; padding: 15px 20px; border-radius: 25px; border: 1px solid var(--border-color); font-size: 16px; box-sizing: border-box; margin-bottom: 20px; outline: none;}
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;}
+.modal-container { background: white; width: 85%; max-width: 340px; border-radius: 20px; padding-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);}
+.modal-header { padding: 20px 25px 5px 25px; display: flex; justify-content: space-between; align-items: center;}
+.close-x-btn { background: none; border: none; font-size: 18px; color: #666; cursor: pointer;}
+.modal-body { padding: 15px 25px; font-size: 15px; color: #333; line-height: 1.5;}
+.group-name-input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ddd; margin-bottom: 15px; box-sizing: border-box; outline: none;}
+.modal-footer { padding: 0 25px; display: flex; gap: 12px;}
+.modal-btn { flex: 1; padding: 12px 0; border-radius: 12px; font-weight: 700; cursor: pointer; border: none;}
+.modal-btn.cancel { background: #fff; border: 1px solid #ddd;}
+.modal-btn.confirm { background: #5994c4;color: white;}
+.floating-btn-container { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 100;}
+.create-group-btn { background: white; border: 1px solid var(--border-color); border-radius: 25px; padding: 12px 30px; font-size: 14px; font-weight: 500; cursor: pointer;}
+.arrow { display: inline-block; transition: transform 0.3s ease;}
+.arrow.rotated { transform: rotate(-90deg);}
+
+/* --- 모달 창 내부 노래 가로 배치 스타일 --- */
+.song-recommend-box {
+    display: flex;             /* 요소를 가로로 나열합니다 */
+    align-items: center;       /* 세로 기준 가운데 정렬 */
+    gap: 15px;                 /* 썸네일과 텍스트 사이 간격 */
+    background-color: #c5dcf44a; /* 연한 회색 배경 */
+    padding: 10px;             /* 안쪽 여백 */
+    border-radius: 12px;       /* 둥근 테두리 */
+    border: 1px solid #eaeaea; /* 얇은 테두리 선 */
+    text-decoration: none;     /* 링크 밑줄 제거 */
+    color: #2b2e36;
+}
+
+.song-thumbnail {
+    width: 120px;              /* 썸네일 가로 크기를 작게 고정 */
+    height: 70px;              /* 썸네일 세로 크기를 작게 고정 */
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;            /* 썸네일 이미지가 찌그러지지 않게 보호 */
+    background-color: #000;
+}
+
+.song-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.song-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow: hidden;          /* 텍스트가 박스를 넘지 않게 처리 */
+}
+
+.song-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e90ff;            /* 제목을 링크처럼 파란색으로 */
+    white-space: nowrap;       /* 제목이 길어도 한 줄로 표시 */
+    overflow: hidden;
+    text-overflow: ellipsis;   /* 너무 길면 '...' 으로 말줄임 처리 */
+}
+
+.song-sub {
+    font-size: 12px;
+    color: #888;
+}
+
+/* 카테고리 전체를 감싸는 래퍼 */
+.category-wrapper {
+    width: 90%;
+    margin: 5px auto;
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+/* 기존 컨테이너 수정: 버튼 공간 확보 */
+.group-category-container {
+    flex: 1;
+    display: flex;
+    gap: 8px;
+    overflow-x: hidden; /* 화살표 사용 시 스크롤 숨김 선택 가능 */
+    padding: 5px 0;
+    transition: all 0.3s ease;
+}
+
+/* 펼쳐짐 상태 클래스 */
+.group-category-container.expanded {
+    flex-wrap: wrap; /* 아래로 나열 */
+    overflow: visible;
+}
+
+/* 화살표 버튼 스타일 */
+.category-toggle-btn {
+    background: none;
+    border: none;
+    padding: 10px;
+    cursor: pointer;
+    color: #888;
+    transition: transform 0.3s ease;
+}
+
+/* 버튼 클릭 시 화살표 회전 */
+.category-toggle-btn.active {
+    transform: rotate(180deg);
+}
+
+.category-item {
+    /* 기존 스타일 유지하되 간격 최적화 */
+    flex: 0 0 auto;
+    height: 34px;
+    padding: 0 15px;
+    font-size: 13px;
+    border-radius: 17px;
+}
+
+/* --- 목록 접기/펴기 스타일 --- */
+.collapsible-content {
+    display: flex; /* 기본 상태: 보임 */
+    flex-direction: column;
+    gap: 12px;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+}
+
+/* collapsed 클래스가 붙으면 목록을 숨깁니다 */
+.collapsible-content.collapsed {
+    display: none !important; /* 목록 숨김[cite: 14] */
+}
+
+/* 화살표 회전 애니메이션 */
+.arrow {
+    display: inline-block;
+    transition: transform 0.3s ease;
+    margin-right: 5px;
+}
+
+/* 접혔을 때 화살표 방향 변경 (오른쪽을 가리키도록) */
+.arrow.rotated {
+    transform: rotate(-90deg); /*[cite: 14] */
+}
+
+/* friend_list.css */
+
+/* friend_list.css */
+
+/* 요청 완료 상태 스타일 */
+/* friend_list.css */
+
+/* 보낸 요청 리스트 항목 디자인 수정 */
+.friend-item.request-sent {
+    /* 1. 이미지와 유사한 둥근 모서리 설정 */
+    border-radius: 19px !important; 
+    
+    /* 2. 매우 연한 회색 외곽선과 그림자 */
+    border: 1px solid #e0e0e0 !important;
+    
+    /* 3. 배경: 이미지 느낌의 아주 연한 미색/노란색 그라데이션 */
+    background: linear-gradient(135deg, #ffffff 0%, #fffdf0 100%) !important;
+    
+    /* 4. 애니메이션 효과 (부드럽게 차오르기) */
+    animation: slowGradientShow 1.2s ease-out forwards;
+    
+    padding: 20px 25px; /* 내부 여백을 넉넉하게 */
+    margin-bottom: 12px;
+}
+
+/* 텍스트 스타일: 이미지처럼 깔끔한 검정/회색톤 */
+.friend-item.request-sent span {
+    color: #333333 !important;
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+}
+
+/* 천천히 변하는 애니메이션 정의 */
+@keyframes slowGradientShow {
+    from { 
+        background: #ffffff; 
+        border-color: #f0f0f0;
+        transform: translateY(5px);
+        opacity: 0.8;
+    }
+    to { 
+        background: linear-gradient(135deg, #ffffff 0%, #fffdf0 100%);
+        border-color: #e0e0e0;
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* 보낸 요청 섹션 제목 스타일 보정 */
+.sent-request-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #444;
+    margin: 0px 0 11px 5px;
+}
+
+/* 요청 완료 시 우측에 뜨는 체크/화살표 아이콘 */
+.sent-icon {
+    width: 18px !important;  /* 기존보다 훨씬 작게 조절 */
+    height: 18px !important;
+    
+    /* 아이콘 색상을 너무 검지 않게, 살짝 회색톤으로 (이미지 느낌) */
+    filter: grayscale(1) opacity(0.5); 
+    
+    /* 위치 미세 조정 */
+    margin-right: 5px;
+    transition: all 1.2s ease;
+}
+
+/* 박스 내부 정렬 보정 */
+.friend-item.request-sent {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 25px !important; /* 위아래 패딩을 줄여서 더 날씬하게 */
+}
+
+/* 그룹 목록 항목 디자인 */
+.friend-item.group-item {
+    /* 1. 하늘색 그라데이션: 왼쪽 위에서 오른쪽 아래로 부드럽게 연결 */
+    background: linear-gradient(90deg, #fafeff 0%, #ecf8ff 51%, #f6fcff 99%);
+    border: 0.5px solid rgb(171, 208, 236);
+}
+
+/* 화살표가 좌우로 움직이는 애니메이션 정의 */
+@keyframes slide-arrow {
+    0% { transform: translateX(0); }
+    50% { transform: translateX(8px); } /* 오른쪽으로 8px 이동 */
+    100% { transform: translateX(0); }
+}
+
+/* 요청됨 상태의 아이콘에 애니메이션 적용 */
+.sent-icon-animated {
+    width: 20px;
+    opacity: 0.6;
+    animation: slide-arrow 2s infinite ease-in-out; /* 1.2초 간격으로 무한 반복 */
+    margin-right: 8px;
+}
+
+/* 요청됨 상태인 아이템의 텍스트 스타일 */
+.request-sent span {
+    color: #888;
+    font-size: 14px;
+}
+
+/* 기본 유저 리스트 아이템 스타일 */
+.add-view-item {
+    background: linear-gradient(90deg, #FDFDFD 0%, #F9F9F9 51%, #F9F9F9 99%);
+    border: 1px solid #eee;
+    border-radius: 21px;
+    margin-bottom: 2px;
+}
+
+/* 친구 추가 버튼 아이콘 크기 조정 */
+.add-btn {
+    width: 24px !important;  /* 기존 28px에서 20px로 축소 */
+    height: 24px !important;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    opacity: 0.8; /* 살짝 투명하게 하여 그라데이션 배경과 조화롭게 설정 */
+}
+
+
+/* --- 수정 코드 --- */
+.group-selectable.selected {
+    background-color: linear-gradient(90deg, #c2efbf 0%, #f8fff9 51%, #c9ecc5 99%) !important; /* 배경을 확실히 변경 */
+    background: linear-gradient(90deg, #f5fff7 0%, #e9ffee 51%, #f5fff7 99%) !important;      /* 그라데이션이 있다면 무력화 */
+    border: 1px solid #80b182 !important;
+}
+
+
+/* 그룹 목록 내 아이콘 크기 조절 */
+.group-member-info .action-icon {
+    width: 22px !important;  /* 기존보다 작게 조절 */
+    height: 22px !important;
+    opacity: 0.7;           /* 부드러운 느낌을 위해 투명도 살짝 추가 */
+}
+
+.group-count {
+    font-size: 16px !important; /* 숫자 크기도 아이콘에 맞춰 소폭 축소 */
+    color: #666;
+    font-weight: 700;
+}
+
+/* 그룹 선택 화면(고수 아이콘 등) 크기 조절 */
+.uncheck-icon, .check-icon {
+    width: 24px !important;  /* 이미지 속 큰 아이콘을 적절한 크기로 제한 */
+    height: 24px !important;
+    object-fit: contain;
+}
+
+/* 아이콘 래퍼 정렬 */
+.group-member-info, .check-icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;        /* 아이콘 영역 확보 */
+}
+
+/* 친구 요청이나 목록이 비어있을 때 스타일 */
+.empty-msg {
+    text-align: center;
+    padding: 30px 0;
+    color: #999;
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.6;
+}
+
+/* 목록 컨테이너와 문구 사이의 최소 간격 유지 */
+#requestListContainer {
+    min-height: 50px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* 친구 목록 전용 헤더 스타일 */
+.friend-header {
+    padding: 0px 14px;
+    background-color: #fff;
+}
+
+.back-button-row {
+    display: flex;
+    align-items: center;
+    height: 40px; /* 버튼이 위치할 줄의 높이 */
+}
+
+.back-to-main {
+    font-size: 22px;
+    color: #333;
+    cursor: pointer;
+    padding: 5px;
+    transition: color 0.2s;
+}
+
+.back-to-main:hover {
+    color: #888; /* 마우스 올렸을 때 살짝 흐려지는 효과 */
+}

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>회원가입</title>
+    <link rel="stylesheet" href="../css/signup.css">
+</head>
+<body>
+    <div class="container">
+        <h1 class="welcome-title" id="typing-text"></h1>
+        
+        <form class="signup-form" action="../php/signup.php" method="POST">
+            <!-- 1. 이메일 입력 -->
+            <div class="input-group">
+                <label>이메일</label>
+                <input type="email" name="email" placeholder="이메일을 입력하세요" required>
+            </div>
+
+            <div class="input-group">
+                <label>닉네임</label>
+                <input type="text" name="username" placeholder="사용할 닉네임을 입력하세요" required>
+            </div>
+
+
+            <!-- 2. 아이디 입력 (영문/숫자 제한 추가) -->
+            <div class="input-group">
+                <label>아이디</label>
+                <!-- pattern 속성을 통해 영문 소문자와 숫자만 허용 (5~20자) -->
+                <input type="text" 
+                       name="login_id" 
+                       placeholder="아이디를 영문으로 입력하세요" 
+                       pattern="^[a-zA-Z0-9]+$" 
+                       title="아이디는 영문 또는 숫자만 입력 가능합니다."
+                       required>
+            </div>
+
+            <!-- 4. 비밀번호 입력 -->
+            <div class="input-group">
+                <label>비밀번호</label>
+                <input type="password" name="password" placeholder="비밀번호를 입력하세요" required>
+            </div>
+
+            <button type="submit" class="submit-btn">회원가입 하기</button>
+        </form>
+
+        <div class="footer-links">
+            <p>이미 계정이 있으신가요? <a href="../html/login.html">로그인하러가기</a></p>
+        </div>
+    </div>
+    <script src="../js/script.js"></script>
+</body>
+</html>
