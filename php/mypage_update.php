@@ -25,12 +25,14 @@ if (!$data) {
 $new_username = mysqli_real_escape_string($conn, $data['username']);
 $new_login_id = mysqli_real_escape_string($conn, $data['login_id']);
 $new_bio = mysqli_real_escape_string($conn, $data['bio']);
+$is_private = (int)$data['is_private']; // 👈 추가된 부분
 
 // 3. 업데이트 실행
 $sql = "UPDATE users 
         SET username = '$new_username', 
             login_id = '$new_login_id', 
-            bio = '$new_bio' 
+            bio = '$new_bio',
+            is_private = $is_private 
         WHERE user_id = $user_id";
 
 if (mysqli_query($conn, $sql)) {

@@ -8,8 +8,25 @@
     --border-color: #dbdbdb;
 }
 
-body { margin: 0; padding: 0; font-family: 'NanumSquareRound', sans-serif; background-color: #f0f0f0; display: flex; justify-content: center; overflow: hidden;}
-.mobile-container { width: 100%; max-width: 400px; height: 100vh; background-color: #ffffff; padding: 20px; box-sizing: border-box; overflow-y: scroll; scrollbar-width: none; position: relative;}
+
+html, body {
+    background-color: #ffffff !important; /* 배경을 강제로 흰색으로 설정 */
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    min-height: 100vh; /* 화면 높이를 최소 100% 확보하여 회색 여백 방지 */
+}
+
+* {
+    /* 터치 시 발생하는 하이라이트 색상을 투명하게 설정합니다. */
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0) !important;
+    
+    /* 혹시 모를 외곽선(포커스)도 방지하고 싶다면 추가하세요. */
+    outline: none !important;
+}
+
+body { margin: 0; padding: 0; font-family: 'NanumSquareRound', sans-serif; background-color: #ffffff; display: flex; justify-content: center; overflow: hidden; padding-top: 30px !important;}
+.mobile-container { width: 100%; max-width: 400px; height: 100vh; background-color: #ffffff; padding: 20px; box-sizing: border-box; overflow-y: scroll; scrollbar-width: none; position: relative;padding-bottom: 100px !important;}
 .mobile-container::-webkit-scrollbar { display: none;}
 
 /* --- 화면 전환 애니메이션 --- */
@@ -405,4 +422,14 @@ body { margin: 0; padding: 0; font-family: 'NanumSquareRound', sans-serif; backg
 
 .back-to-main:hover {
     color: #888; /* 마우스 올렸을 때 살짝 흐려지는 효과 */
+}
+
+/* 대기 중인 요청이 없습니다 스타일 */
+#sentEmptyMsg {
+    text-align: center;
+    color: #999;
+    font-size: 15px;
+    font-weight: 500;
+    padding: 20px 0;
+    line-height: 1.6;
 }

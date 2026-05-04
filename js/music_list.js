@@ -59,6 +59,15 @@ function setupDateNavigation() {
             updateDateDisplay();
         };
     }
+    const dateDisplay = document.getElementById("today-date");
+    if (dateDisplay) {
+        dateDisplay.style.cursor = "pointer"; // 클릭 가능하다는 시각적 표시
+        dateDisplay.onclick = () => {
+            currentDate = new Date(); // 오늘 날짜로 초기화
+            currentDate.setHours(0, 0, 0, 0);
+            updateDateDisplay(); // 화면 갱신
+        };
+    }
 }
 
 // --- 4. 데이터 로드 (DB 연동) ---
@@ -67,6 +76,11 @@ async function loadData() {
         const targetDate = formatDate(currentDate);
         const res = await fetch(`../php/api.php?action=get_data&date=${targetDate}`);
         const data = await res.json();
+
+        if (data.error === "Unauthorized") {
+            window.location.replace("login.html");
+            return;
+        }
 
         // 1. 피드(노래) 목록 출력
         renderFeedSongs(data.feed_songs);
@@ -132,7 +146,7 @@ function renderFeedSongs(songs) {
             card.innerHTML = `
                 <div class="song-scroll-wrapper">
                     <div class="thumb-area" style="cursor: pointer;">
-                        <img src="${song.thumbnail_img}" alt="thumbnail" class="thumb-img">
+                        <img src="${song.thumbnail_img}" alt="thumbnail" class="thumb-img" onload="if(this.naturalWidth === 120 && this.src.includes('maxresdefault')) this.src = this.src.replace('maxresdefault', 'hqdefault');" onerror="if(this.src.includes('maxresdefault')) this.src = this.src.replace('maxresdefault', 'hqdefault');">
                         <div class="video-info-overlay">
                             <div class="video-title" style="color: #ffffff;">${song.title || '제목 없음'}</div>
                         </div>
@@ -259,6 +273,7 @@ function restoreToggleStates() {
 }
 
 // --- 5. 사이드바 바텀 시트 그룹 정보 로드 ---
+// --- 5. 사이드바 바텀 시트 그룹 정보 로드 ---
 async function loadMyInfoIntoGroup() {
     const groupListContainer = document.getElementById("real-group-list");
     if (!groupListContainer) return;
@@ -266,7 +281,8 @@ async function loadMyInfoIntoGroup() {
     groupListContainer.innerHTML = ""; 
 
     try {
-        const userRes = await fetch('../php/get_user_info.php');
+        // [수정 완료] 캐시 방지 시간값 추가
+        const userRes = await fetch('../php/get_user_info.php?t=' + new Date().getTime());
         const userData = await userRes.json();
         
         if (userData.success) {
@@ -280,11 +296,12 @@ async function loadMyInfoIntoGroup() {
                 myItem.classList.add("active");
             }
 
+            // [수정 완료] 나 항목 user-profile.jpg 강제 적용
             myItem.innerHTML = `
-                <div class="group-icon-circle icon-black">
-                    ${userData.username.charAt(0).toUpperCase()}
+                <div class="group-icon-circle" style="background: none; overflow: hidden; border: 1px solid #eee;">
+                    <img src="../img/user-profile.jpg" alt="me" style="width: 100%; height: 100%; object-fit: cover;">
                 </div>
-                <div class="group-name-text">${userData.username} (나)</div>
+                <div class="group-name-text">${userData.username}</div>
             `;
             
             myItem.onclick = () => {
@@ -294,7 +311,8 @@ async function loadMyInfoIntoGroup() {
             groupListContainer.appendChild(myItem);
 
             // --- [참여 중인 그룹] 목록 ---
-            const groupRes = await fetch('../php/fetch_my_groups.php');
+            // 🔥 [에러 해결!] 여기서 groupRes를 딱 한 번만 선언해야 합니다.
+            const groupRes = await fetch('../php/fetch_my_groups.php?t=' + new Date().getTime());
             const groupData = await groupRes.json();
 
             if (groupData.success && groupData.groups.length > 0) {
@@ -306,9 +324,15 @@ async function loadMyInfoIntoGroup() {
                         gItem.classList.add("active"); 
                     }
 
+                    // [수정 완료] 그룹 항목 group-profile.jpg 강제 적용
+                    let groupImg = group.group_profile_img;
+                    if (!groupImg || groupImg === '../img/group.png') {
+                        groupImg = '../img/group-profile.jpg';
+                    }
+                    
                     gItem.innerHTML = `
-                        <div class="group-icon-circle icon-blue">
-                            <i class="fas fa-users" style="font-size: 14px;"></i>
+                        <div class="group-icon-circle" style="background: none; overflow: hidden; border: 1px solid #eee;">
+                            <img src="${groupImg}" alt="group" style="width: 100%; height: 100%; object-fit: cover;">
                         </div>
                         <div class="group-name-text">${group.group_name}</div>
                     `;

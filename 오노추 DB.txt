@@ -202,3 +202,87 @@ ALTER TABLE users ADD COLUMN main_group_id INT NULL;
 /* songs 테이블에 생성 날짜 컬럼을 추가합니다. */
 ALTER TABLE songs 
 ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE users ADD is_private TINYINT(1) DEFAULT 0;
+
+ALTER TABLE club_groups ADD group_profile_img VARCHAR(255) DEFAULT '../img/group.png';
+
+///////////////////////////////////////////
+-- 1. 초기화 (기존 테이블이 있다면 삭제하고 새로 만듭니다)
+SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS group_members;
+DROP TABLE IF EXISTS club_groups;
+DROP TABLE IF EXISTS friends;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS songs;
+
+-- 2. 유저 테이블 (users)
+-- 다른 테이블들이 참조해야 하므로 가장 먼저 만듭니다.
+CREATE TABLE users (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    login_id VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    username VARCHAR(50) NOT NULL,
+    bio VARCHAR(255),
+    dday VARCHAR(50),
+    current_song_id INT NULL, -- 나중에 songs 테이블과 연결
+    main_group_id INT NULL,
+    is_private TINYINT(1) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 3. 노래 정보 테이블 (songs)
+-- 유저 ID(user_id) 컬럼을 확실히 포함했습니다.
+CREATE TABLE songs (
+    song_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL, 
+    youtube_url VARCHAR(255) NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    daily_comment VARCHAR(255),
+    thumbnail_img VARCHAR(255),
+    log_date DATE DEFAULT (CURRENT_DATE),
+    log_time TIME DEFAULT (CURRENT_TIME),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_songs_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+-- 4. 유저 테이블의 현재 노래 외래키 연결
+ALTER TABLE users ADD CONSTRAINT fk_users_current_song FOREIGN KEY (current_song_id) REFERENCES songs(song_id) ON DELETE SET NULL;
+
+-- 5. 친구 관계 테이블 (friends)
+CREATE TABLE friends (
+    friendship_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    friend_id INT NOT NULL,
+    status ENUM('pending', 'accepted') DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (friend_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    UNIQUE KEY unique_friendship (user_id, friend_id)
+);
+
+-- 6. 그룹 테이블 (club_groups)
+CREATE TABLE club_groups (
+    group_id INT AUTO_INCREMENT PRIMARY KEY,
+    group_name VARCHAR(100) NOT NULL,
+    description TEXT,
+    group_profile_img VARCHAR(255) DEFAULT '../img/group-profile.jpg',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 7. 그룹 멤버 테이블 (group_members)
+CREATE TABLE group_members (
+    member_id INT AUTO_INCREMENT PRIMARY KEY,
+    group_id INT NOT NULL,
+    user_id INT NOT NULL,
+    role ENUM('admin', 'member') DEFAULT 'member',
+    joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (group_id) REFERENCES club_groups(group_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+USE blabackspace;
+ALTER TABLE users ADD COLUMN fcm_token VARCHAR(255) DEFAULT NULL;

@@ -17,8 +17,8 @@ header('Content-Type: application/json');
  * SQL문에 u.login_id를 추가하여 마이페이지에서 @아이디가 표시되도록 합니다.
  */
 // mypage_api.php 수정 부분
-$sql = "SELECT u.username, u.login_id, u.bio, 
-               DATEDIFF(CURRENT_DATE, u.created_at) + 1 AS dday_count, 
+$sql = "SELECT u.username, u.login_id, u.bio, u.is_private, 
+               DATEDIFF(CURRENT_DATE, u.created_at) + 1 AS dday_count,
                s.title, s.youtube_url, s.thumbnail_img, s.daily_comment 
         FROM users u 
         LEFT JOIN songs s ON u.current_song_id = s.song_id 

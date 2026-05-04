@@ -32,11 +32,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
                 
-                // 프로필 정보 매핑
-                document.getElementById('displayId').innerText = data.username || "이름 없음";
+                const userNameText = data.username || "이름 없음";
+                const lockIconHtml = (data.is_private == 1) ? `<img src="../img/lock.png" alt="비공개" style="width:20px; height:20px; margin-right:6px; vertical-align:middle;">` : '';
+                document.getElementById('displayId').innerHTML = `${lockIconHtml}${userNameText}`;
                 
+                // 체크박스 상태 불러오기
+                const privateCheckbox = document.getElementById('editPrivate');
+                if (privateCheckbox) {
+                    privateCheckbox.checked = (data.is_private == 1);
+                }
+
                 // 🔥 새로 추가한 로그인 아이디 매핑! (DB에 login_id가 있다면 앞쪽에 @를 붙여서 출력)
                 const displayLoginIdEl = document.getElementById('displayLoginId');
+
                 if (displayLoginIdEl) {
                     displayLoginIdEl.innerText = data.login_id ? `@${data.login_id}` : "@아이디 없음";
                 }
@@ -113,19 +121,22 @@ if (saveBtn) {
             body: JSON.stringify({
                 username: updatedUsername,
                 login_id: updatedLoginId,
-                bio: updatedBio
+                bio: updatedBio, // 👈 콤마 잊지 마세요!
+                is_private: document.getElementById('editPrivate').checked ? 1 : 0
             })
         })
         .then(res => res.json())
         .then(data => {
             if (data.success) {
                 // 저장 성공 시 화면의 텍스트들을 즉시 갱신
-                displayId.innerText = updatedUsername;
+                const isPrivateChecked = document.getElementById('editPrivate').checked;
+                const newLockHtml = isPrivateChecked ? `<img src="../img/lock.png" alt="비공개" style="width:20px; height:20px; margin-right:6px; vertical-align:middle;">` : '';
+                displayId.innerHTML = `${newLockHtml}${updatedUsername}`;
                 displayLoginId.innerText = `@${updatedLoginId}`;
                 displayStatus.innerText = updatedBio;
                 
                 editModal.classList.add('hidden');
-                showModal("프로필이 성공적으로 저장되었습니다.");
+                showModal("프로필이 변경되었습니다.");
             } else {
                 // 중복 아이디 등 서버에서 보낸 에러 메시지 알림
                 alert(data.message || "저장에 실패했습니다."); 

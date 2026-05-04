@@ -12,7 +12,7 @@ $user_id = $_SESSION['user_id'];
 header('Content-Type: application/json');
 
 // 내 user_id가 포함된 그룹을 club_groups와 group_members 조인으로 가져옵니다.
-$sql = "SELECT cg.group_id, cg.group_name 
+$sql = "SELECT cg.group_id, cg.group_name, cg.group_profile_img 
         FROM club_groups cg
         JOIN group_members gm ON cg.group_id = gm.group_id
         WHERE gm.user_id = $user_id

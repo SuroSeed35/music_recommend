@@ -1,8 +1,8 @@
 <?php
-// 1. 예기치 않은 출력 방지 (출력 버퍼링 시작)
+// 1. 예기치 않은 출력 방지
 ob_start();
 
-// 2. 에러 보고 설정 (디버깅용으로 켜두되, JSON 응답에 방해되지 않게 처리)
+// 2. 에러 보고 설정
 ini_set('display_errors', 0); 
 error_reporting(E_ALL);
 
@@ -27,23 +27,41 @@ try {
         $title = mysqli_real_escape_string($conn, $_POST['title'] ?? '');
         $thumb = mysqli_real_escape_string($conn, $_POST['thumb'] ?? '');
         
-        // 날짜 및 시간 생성
         $current_date = date('Y-m-d');
         $current_time = date('H:i:s');
 
-        // 필수 데이터 검증
         if (empty($url) || empty($title)) {
             throw new Exception('필수 데이터가 누락되었습니다.');
         }
 
-        // SQL 실행[cite: 9]
+        // 3. 노래 정보를 DB에 먼저 저장
         $sql = "INSERT INTO songs (user_id, youtube_url, title, daily_comment, thumbnail_img, log_date, log_time) 
                 VALUES ('$user_id', '$url', '$title', '$comment', '$thumb', '$current_date', '$current_time')";
         
         if (mysqli_query($conn, $sql)) {
             $last_id = mysqli_insert_id($conn);
-            // 유저 정보 업데이트[cite: 9]
             mysqli_query($conn, "UPDATE users SET current_song_id = '$last_id' WHERE user_id = '$user_id'");
+
+            // ⭐️ 4. 저장이 성공했으니 이제 친구들에게 알림을 쏩니다!
+            include_once 'fcm_send.php';
+
+            // 내 친구들 중 FCM 토큰이 있는 사람 목록 가져오기
+            $friend_sql = "SELECT u.fcm_token FROM friends f 
+                           JOIN users u ON (f.friend_id = u.user_id OR f.user_id = u.user_id)
+                           WHERE (f.user_id = '$user_id' OR f.friend_id = '$user_id') 
+                           AND f.status = 'accepted' AND u.user_id != '$user_id' AND u.fcm_token IS NOT NULL";
+            $friend_res = mysqli_query($conn, $friend_sql);
+
+            // 내 이름 가져오기
+            $me_res = mysqli_query($conn, "SELECT username FROM users WHERE user_id = '$user_id'");
+            $me_row = mysqli_fetch_assoc($me_res);
+            $my_name = $me_row['username'] ?? '친구';
+
+            // 친구들에게 한 명씩 발송
+            while($friend = mysqli_fetch_assoc($friend_res)) {
+                sendFCM($friend['fcm_token'], "새로운 노래 추천! 🎵", "{$my_name}님이 오늘의 노래를 추천했습니다: {$title}");
+            }
+
             $response = ['success' => true];
         } else {
             throw new Exception('DB 저장 오류: ' . mysqli_error($conn));
@@ -53,7 +71,6 @@ try {
     $response = ['success' => false, 'message' => $e->getMessage()];
 }
 
-// 혹시 모를 앞선 출력을 비우고 JSON만 전송
 ob_end_clean();
 echo json_encode($response);
 mysqli_close($conn);

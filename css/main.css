@@ -9,14 +9,21 @@
     --radius-btn: 100px;
 }
 
+* {
+    /* 터치 시 발생하는 하이라이트 색상을 투명하게 설정합니다. */
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0) !important;
+    
+    /* 혹시 모를 외곽선(포커스)도 방지하고 싶다면 추가하세요. */
+    outline: none !important;
+}
+
 /* 기본 설정 */
 html, body {
     margin: 0;
     padding: 0;
-    height: 100%;
     background-color: var(--bg-color);
     font-family: 'Pretendard', sans-serif;
-    overflow: hidden; /* 스크롤 방지 */
+    padding-top: 60px; /* 숫자를 키울수록 더 아래로 내려갑니다 (예: 80px, 100px) */
 }
 
 /* 전체 컨테이너 */
@@ -24,13 +31,13 @@ html, body {
 .main-container {
     width: 100%;
     max-width: 400px;
-    height: 100vh;
     margin: 0 auto;
     position: relative;
     display: flex;
     flex-direction: column;
-    padding: 0 20px; /* 좌우 여백 추가 */
+    padding: 0 20px 120px 20px;
     box-sizing: border-box;
+    justify-content: center; /* 세로 중앙 정렬 */
 }
 
 /* [수정] 제목 스타일: 오른쪽 정렬 및 아래 박스와 간격 축소 */

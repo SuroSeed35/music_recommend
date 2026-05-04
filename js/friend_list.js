@@ -89,6 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     div.dataset.name = senderName;
                     div.innerHTML = `<span>${senderName}님의 친구 요청</span>`;
                     attachSwipeToAccept(div);
+                    div.addEventListener('click', () => openAcceptConfirmModal(div)); // 👈 클릭 이벤트 추가
                     reqList.appendChild(div);
                 });
             }
@@ -141,7 +142,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     name: friendName, bio: f.bio || '', dday: f.dday || '1',
                     song: f.song_title || '', link: f.youtube_url || '#', thumb: f.thumbnail_img || ''
                 });
-                fDiv.innerHTML = `<span>${friendName}</span>`; 
+                const lockIcon = f.is_private == 1 ? `<img src="../img/lock.png" alt="비공개" style="width:14px; height:14px; margin-right:5px; vertical-align:middle;">` : '';
+                fDiv.innerHTML = `<span>${lockIcon}${friendName}</span>`;
                 fDiv.addEventListener('click', () => showProfile(fDiv.dataset));
                 friendList.appendChild(fDiv);
 
@@ -212,14 +214,17 @@ document.addEventListener('DOMContentLoaded', () => {
             resultList.appendChild(document.createElement('hr')).className = "divider";
 
             const searchResults = data.search_results || [];
-            if (searchResults.length === 0) { resultList.innerHTML += '<div>표시할 유저가 없습니다.</div>'; } 
+            if (searchResults.length === 0) { 
+                resultList.innerHTML += '<div class="empty-msg">일치하는 유저가 없습니다.</div>'; 
+            }
             else {
                 searchResults.forEach(u => {
                     const div = document.createElement('div');
                     div.className = 'friend-item add-view-item'; 
                     div.dataset.userId = u.user_id;
                     div.dataset.userName = u.username;
-                    div.innerHTML = `<span>${u.username}</span><img src="../img/add-user.png" class="action-icon add-btn">`;
+                    const searchLockIcon = u.is_private == 1 ? `<img src="../img/lock.png" alt="비공개" style="width:14px; height:14px; margin-right:5px; vertical-align:middle;">` : '';
+                    div.innerHTML = `<span>${searchLockIcon}${u.username}</span><img src="../img/add-user.png" class="action-icon add-btn">`;
                     div.addEventListener('click', () => { if (!div.classList.contains('request-sent')) openAddConfirmModal(div); });
                     attachSwipeToAdd(div);
                     resultList.appendChild(div);
@@ -282,10 +287,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 const result = await response.json();
                 if (result.success) {
-                    currentTarget.classList.add('request-sent');
-                    currentTarget.innerHTML = `<span>${currentTarget.dataset.userName}님께 요청됨</span><img src="../img/right-arrow.png" class="sent-icon-animated">`;
-                    document.getElementById('sentRequestsContainer').appendChild(currentTarget); 
-                    if (document.getElementById('sentEmptyMsg')) document.getElementById('sentEmptyMsg').style.display = 'none';
+                    // DOM을 강제로 옮기지 않고, 현재 입력된 검색어로 검색 결과를 아예 새로고침 합니다.
+                    const currentKeyword = document.getElementById('friendSearchInput').value.trim();
+                    fetchAndDisplayUsers(currentKeyword); 
                 }
             } else if (modalAction === "ACCEPT") {
                 const friendshipId = currentTarget.dataset.fid;
@@ -374,4 +378,31 @@ document.addEventListener('DOMContentLoaded', () => {
             else item.style.transform = 'translateX(0px)';
         });
     }
+        document.getElementById('openGroupNameModal').addEventListener('click', () => {
+        // 선택된 인원 수를 모달에 표시
+        document.getElementById('selectedCountText').innerText = `선택된 멤버: ${selectedGroupMembers.length}명 (나 포함)`;
+        // 그룹 이름 입력창 초기화
+        document.getElementById('groupNameInput').value = ''; 
+        document.getElementById('groupNameModal').style.display = 'flex';
+    });
 });
+
+// --- 글자 수 실시간 카운팅 기능 ---
+const charCountDisplay = document.getElementById("char-count");
+
+if (commentInput && charCountDisplay) {
+    commentInput.addEventListener("input", () => {
+        // 현재 입력된 글자 수 계산
+        const currentLength = commentInput.value.length;
+        charCountDisplay.innerText = `${currentLength} / 50자`;
+
+        // 50자가 꽉 차면 숫자를 빨간색으로 변경
+        if (currentLength >= 50) {
+            charCountDisplay.style.color = "#ff4d4f";
+            charCountDisplay.style.fontWeight = "bold";
+        } else {
+            charCountDisplay.style.color = "#888";
+            charCountDisplay.style.fontWeight = "normal";
+        }
+    });
+}

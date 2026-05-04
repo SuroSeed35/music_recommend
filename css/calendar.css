@@ -9,6 +9,23 @@ body {
     align-items: center;
     min-height: 100vh;
     overflow-y: auto; 
+    padding-top: 40px !important;
+}
+
+html, body {
+    background-color: #ffffff !important; /* 배경을 강제로 흰색으로 설정 */
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    min-height: 100vh; /* 화면 높이를 최소 100% 확보하여 회색 여백 방지 */
+}
+
+* {
+    /* 터치 시 발생하는 하이라이트 색상을 투명하게 설정합니다. */
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0) !important;
+    
+    /* 혹시 모를 외곽선(포커스)도 방지하고 싶다면 추가하세요. */
+    outline: none !important;
 }
 
 .main-container { 

@@ -7,20 +7,36 @@
     --grass-active: #2ea44f;
 }
 
+html {
+    background-color: #ffffff !important;
+}
+
+* {
+    /* 터치 시 발생하는 하이라이트 색상을 투명하게 설정합니다. */
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0) !important;
+    
+    /* 혹시 모를 외곽선(포커스)도 방지하고 싶다면 추가하세요. */
+    outline: none !important;
+}
+
 body {
     margin: 0; padding: 0;
     font-family: 'Pretendard', sans-serif;
-    background-color: #f0f0f0;
+    background-color: #ffffff;
     display: flex; justify-content: center;
+    padding-top: 30px !important;
 }
 
 .mobile-container {
     width: 100%; max-width: 400px;
     min-height: 100vh;
     background-color: #ffffff;
-    padding: 25px 20px;
+    /* [수정 전] padding: 25px 20px; */
+    /* [수정 후] 하단 패딩(bottom)을 넉넉하게 120px 줍니다. */
+    padding: 25px 20px 120px 20px; 
     box-sizing: border-box;
     overflow-x: hidden;
+
 }
 
 /* 프로필 */
@@ -247,3 +263,38 @@ body {
 .back-to-main:hover {
     transform: scale(1.1); /* 마우스 올렸을 때 살짝 커지는 효과 */
 }
+
+/* 스위치 토글 디자인 */
+.toggle-switch {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    margin-left: auto; /* 우측으로 밀기 */
+}
+.toggle-input {
+    display: none; /* 기본 체크박스 숨김 */
+}
+.toggle-label {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #ccc;
+    border-radius: 24px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+.toggle-label::before {
+    content: "";
+    position: absolute;
+    width: 20px; height: 20px;
+    left: 2px; bottom: 2px;
+    background-color: white;
+    border-radius: 50%;
+    transition: transform 0.3s;
+}
+.toggle-input:checked + .toggle-label {
+    background-color: #000; /* 활성화 시 색상 */
+}
+.toggle-input:checked + .toggle-label::before {
+    transform: translateX(20px);
+}
+

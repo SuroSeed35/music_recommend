@@ -12,15 +12,25 @@
         <div class="content-section">
             <div class="input-card card">
                 <div class="album-preview"><img src="" id="main-image"></div>
+                <!-- 기존 코드에서 textarea 주변을 이렇게 수정해 주세요 -->
                 <div class="input-group">
-                    <textarea id="comment-input" placeholder="오늘의 한 마디 작성하기" class="text-input"></textarea>
-                    <input type="text" id="url-input" placeholder="유튜브 URL 입력하기" class="text-input">
+                    <!-- 글자 수 카운터를 위해 div로 한 번 묶어줍니다 -->
+                    <div style="position: relative;">
+                        <!-- 1. 타이핑하는 글자가 카운터에 가려지지 않게 padding-bottom: 30px; 을 추가합니다 -->
+                        <textarea id="comment-input" placeholder="오늘의 한 마디를 남겨주세요" class="text-input" maxlength="50" style="padding-bottom: 30px;"></textarea>
+                        
+                        <!-- 2. position: absolute를 이용해 입력창 안쪽 우측 하단에 딱 붙여줍니다 -->
+                        <div id="char-count" style="position: absolute; bottom: 12px; right: 16px; font-size: 12px; color: #888; background: transparent;">0 / 50자</div>
+                    </div>
+                    
+                    <input type="text" id="url-input" placeholder="유튜브 URL을 입력하세요" class="text-input">
                 </div>
                 <!-- JS에서 이벤트를 처리하므로 onclick 속성을 제거함[cite: 7, 8] -->
                 <button id="action-btn" class="submit-btn">이 노래로 추천하기</button>
             </div>
         </div>
     </div>
+
     <script src="../js/main.js"></script>
 </body>
 </html>
