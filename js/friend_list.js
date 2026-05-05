@@ -386,23 +386,3 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('groupNameModal').style.display = 'flex';
     });
 });
-
-// --- 글자 수 실시간 카운팅 기능 ---
-const charCountDisplay = document.getElementById("char-count");
-
-if (commentInput && charCountDisplay) {
-    commentInput.addEventListener("input", () => {
-        // 현재 입력된 글자 수 계산
-        const currentLength = commentInput.value.length;
-        charCountDisplay.innerText = `${currentLength} / 50자`;
-
-        // 50자가 꽉 차면 숫자를 빨간색으로 변경
-        if (currentLength >= 50) {
-            charCountDisplay.style.color = "#ff4d4f";
-            charCountDisplay.style.fontWeight = "bold";
-        } else {
-            charCountDisplay.style.color = "#888";
-            charCountDisplay.style.fontWeight = "normal";
-        }
-    });
-}
