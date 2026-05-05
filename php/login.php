@@ -15,6 +15,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $_SESSION['user_id'] = $user['user_id'];
         $_SESSION['login_id'] = $user['login_id'];
         $my_id = $user['user_id'];
+
+        setcookie('auto_user_id', $user['user_id'], time() + (86400 * 365), "/");
         
         $check_sql = "SELECT song_id FROM songs WHERE user_id = $my_id AND DATE(created_at) = CURRENT_DATE";
         $check_res = mysqli_query($conn, $check_sql);
