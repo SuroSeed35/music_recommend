@@ -1,8 +1,8 @@
 <?php
 $host = "localhost";
-$user = "blabackspace";      // XAMPP 기본값
-$pass = "wlthd4637@#";          // XAMPP 기본값
-$dbName = "blabackspace";
+$user = "";      
+$pass = "";        
+$dbName = "e";
 
 $conn = mysqli_connect($host, $user, $pass, $dbName);
 
