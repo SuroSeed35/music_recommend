@@ -252,9 +252,13 @@ function showSongs(songs) {
             </div>
         `;
 
+        // calendar.js 내부 showSongs 함수 부분
         wrapper.innerHTML = `
             <div class="thumb-area" onclick="window.open('${song.url}', '_blank')">
-                <img src="${song.thumb}" alt="thumbnail">
+                <img src="${song.thumb}" 
+                    onload="if(this.naturalWidth === 120 && this.src.includes('maxresdefault')) this.src = this.src.replace('maxresdefault', 'hqdefault');" 
+                    onerror="if(this.src.includes('maxresdefault')) this.src = this.src.replace('maxresdefault', 'hqdefault');" 
+                    alt="thumbnail">
                 <div class="video-overlay">
                     <div class="title">${song.videoTitle}</div>
                 </div>
