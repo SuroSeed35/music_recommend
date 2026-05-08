@@ -9,6 +9,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const calendarMonth = document.getElementById('calendarMonth');
     const contributionGrid = document.getElementById('contributionGrid');
     const backBtn = document.getElementById("backToMain");
+    const logoutBtn = document.getElementById('logout-btn');
+    
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            if (confirm('정말 로그아웃 하시겠습니까?')) {
+                // php 폴더의 logout.php로 요청 전송
+                fetch('../php/logout.php')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            alert(data.message);
+                            // 로그아웃 성공 시 로그인 페이지로 리다이렉트
+                            window.location.href = 'login.html'; 
+                        } else {
+                            alert('로그아웃 처리에 실패했습니다. 다시 시도해 주세요.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error during logout:', error);
+                        alert('서버와 통신 중 오류가 발생했습니다.');
+                    });
+            }
+        });
+    }
     if (backBtn) {
         backBtn.onclick = () => {
             // 프로젝트 구조에 맞게 메인 페이지 경로를 확인하세요.
@@ -21,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
         modalMsg.innerText = msg;
         confirmModal.classList.remove('hidden');
     }
+    
 
     // --- [2] 서버 데이터 로드 로직 ---
     function loadUserData() {
