@@ -105,39 +105,37 @@ switch ($action) {
 
     // music_recommend/php/api.php 내 create_group 케이스 수정
     case 'create_group':
-        ob_start(); // 출력 버퍼링 시작
-        
+        ob_start();
         $data = json_decode(file_get_contents('php://input'), true);
         $g_name = mysqli_real_escape_string($conn, $data['group_name']);
         $members = isset($data['members']) ? $data['members'] : [];
-        
         if (!in_array($my_id, $members)) { $members[] = $my_id; }
         $members = array_unique($members);
 
         if (mysqli_query($conn, "INSERT INTO club_groups (group_name) VALUES ('$g_name')")) {
             $new_group_id = mysqli_insert_id($conn);
-            
-            // 🔔 알림 발송 로직 안전하게 실행
-            if (file_exists('fcm_v1_send.php')) {
-                include_once 'fcm_v1_send.php';
-                // sendFCMV1 함수가 정의되어 있는지 확인 후 호출
-                if (function_exists('sendFCMV1')) {
-                    // 멤버 초대 및 알림 발송 루프 실행...
-                }
-            }
+            include_once 'fcm_v1_send.php';
+            $me = mysqli_fetch_assoc(mysqli_query($conn, "SELECT username FROM users WHERE user_id = $my_id"));
 
             foreach ($members as $m_id) {
                 $role = ((int)$m_id == $my_id) ? 'admin' : 'member';
                 mysqli_query($conn, "INSERT INTO group_members (group_id, user_id, role) VALUES ($new_group_id, $m_id, '$role')");
+                
+                // 🔥 나를 제외한 초대된 멤버들에게 실제 알림 발송
+                if ((int)$m_id != $my_id) {
+                    $target = mysqli_fetch_assoc(mysqli_query($conn, "SELECT fcm_token FROM users WHERE user_id = $m_id"));
+                    if (!empty($target['fcm_token'])) {
+                        sendFCMV1($target['fcm_token'], "새로운 그룹 초대! 🤝", "{$me['username']}님이 '{$g_name}' 그룹에 초대했습니다.");
+                    }
+                }
             }
-            
-            ob_clean(); // 버퍼에 쌓인 Warning 메시지 등을 삭제
+            ob_clean();
             echo json_encode(["success" => true]);
         } else {
             ob_clean();
-            echo json_encode(["success" => false, "message" => "DB 오류"]);
+            echo json_encode(["success" => false, "message" => "DB 저장 실패"]);
         }
-        exit; 
+        exit;
         break;
 
     case 'set_main_group':

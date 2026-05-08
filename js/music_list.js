@@ -26,6 +26,22 @@ document.addEventListener("DOMContentLoaded", () => {
     restoreToggleStates(); 
 });
 
+const groupListScrollArea = document.getElementById("real-group-list");
+
+    if (groupListScrollArea) {
+        // 💡 손가락으로 밀었을 때(터치 이벤트) 처리
+        groupListScrollArea.addEventListener('touchstart', (e) => {
+            // 터치 시작 시 이벤트 전파 차단
+            e.stopPropagation();
+        }, { passive: true });
+
+        groupListScrollArea.addEventListener('touchmove', (e) => {
+            // 💡 중요: 리스트 내부에서 손가락을 움직일 때는 
+            // 바깥쪽 바텀 시트의 '스와이프 닫기' 로직이 실행되지 않게 차단합니다.
+            e.stopPropagation();
+        }, { passive: true });
+    }
+
 // --- 1. 날짜 포맷팅 함수 ---
 function formatDate(date) {
     const y = date.getFullYear();
@@ -69,6 +85,7 @@ function setupDateNavigation() {
         };
     }
 }
+
 
 // --- 4. 데이터 로드 (DB 연동) ---
 async function loadData() {
@@ -279,7 +296,7 @@ async function loadMyInfoIntoGroup() {
     if (!groupListContainer) return;
 
     groupListContainer.className = "group-list-container";
-    
+
     try {
         // [수정 완료] 캐시 방지 시간값 추가
         const userRes = await fetch('../php/get_user_info.php?t=' + new Date().getTime());

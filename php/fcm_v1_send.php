@@ -1,41 +1,64 @@
 <?php
-function sendFCMNotification($deviceToken, $title, $body, $imageUrl = "") {
-    $serviceAccountFile = 'firebase_key.json'; // 업로드하신 파일명 확인
-    $projectId = "your-project-id"; // Firebase 콘솔의 프로젝트 ID
+// 1. Google 서버에서 1시간용 액세스 토큰 가져오기
+function getGoogleAccessToken($keyFilePath) {
+    $keyData = json_decode(file_get_contents($keyFilePath), true);
+    $clientEmail = $keyData['client_email'];
+    $privateKey = $keyData['private_key'];
 
-    // 1. Google OAuth2 Access Token 가져오기 로직 (생략 - 기존 코드 활용)
+    $header = json_encode(['alg' => 'RS256', 'typ' => 'JWT']);
+    $now = time();
+    $payload = json_encode([
+        'iss' => $clientEmail,
+        'scope' => 'https://www.googleapis.com/auth/firebase.messaging',
+        'aud' => 'https://oauth2.googleapis.com/token',
+        'exp' => $now + 3600,
+        'iat' => $now
+    ]);
+
+    $base64UrlHeader = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($header));
+    $base64UrlPayload = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($payload));
+    
+    $signature = '';
+    openssl_sign($base64UrlHeader . "." . $base64UrlPayload, $signature, $privateKey, "sha256WithRSAEncryption");
+    $base64UrlSignature = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($signature));
+    
+    $jwt = $base64UrlHeader . "." . $base64UrlPayload . "." . $base64UrlSignature;
+
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, 'https://oauth2.googleapis.com/token');
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
+        'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+        'assertion' => $jwt
+    ]));
+    $res = json_decode(curl_exec($ch), true);
+    return $res['access_token'] ?? null;
+}
+
+// 2. 실제 알림 발송 함수 (이름을 sendFCMV1으로 통일)
+function sendFCMV1($deviceToken, $title, $body, $imageUrl = "") {
+    $serviceAccountFile = __DIR__ . '/firebase_key.json'; 
+    $keyData = json_decode(file_get_contents($serviceAccountFile), true);
+    $projectId = $keyData['project_id'];
+
     $accessToken = getGoogleAccessToken($serviceAccountFile); 
+    if (!$accessToken) return false;
 
     $url = "https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send";
+    $message = ["message" => [
+        "token" => $deviceToken,
+        "notification" => ["title" => $title, "body" => $body],
+        "android" => ["notification" => ["image" => $imageUrl]],
+        "data" => ["click_action" => "FLUTTER_NOTIFICATION_CLICK"]
+    ]];
 
-    $message = [
-        "message" => [
-            "token" => $deviceToken,
-            "notification" => [
-                "title" => $title,
-                "body" => $body
-            ],
-            "android" => [
-                "notification" => [
-                    "image" => $imageUrl // 사진(앨범 아트 등) 포함 시
-                ]
-            ],
-            "data" => [
-                "click_action" => "FLUTTER_NOTIFICATION_CLICK" // 클릭 시 이동용
-            ]
-        ]
-    ];
-
-    $options = [
-        'http' => [
-            'method'  => 'POST',
-            'header'  => "Content-Type: application/json\r\n" .
-                         "Authorization: Bearer " . $accessToken . "\r\n",
-            'content' => json_encode($message),
-        ]
-    ];
-
-    $context  = stream_context_create($options);
-    return file_get_contents($url, false, $context);
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ["Authorization: Bearer $accessToken", "Content-Type: application/json"]);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($message));
+    return curl_exec($ch);
 }
 ?>
