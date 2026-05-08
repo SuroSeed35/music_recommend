@@ -180,3 +180,75 @@ if (commentInput && charCountDisplay) {
         }
     });
 }
+
+// ==========================================
+// [1단계] 웹 브라우저 푸시 알림 권한 및 토큰 발급
+// ==========================================
+
+// 1. 파이어베이스 환경 설정 (콘솔 -> 프로젝트 설정 -> 일반 탭 하단 내 앱에서 확인 가능)
+const firebaseConfig = {
+    apiKey: "AIzaSyBD61ToNb3GEgNKRw_-IUN97Z4fCoDiYK8",
+    authDomain: "musicrecommend-c0498.firebaseapp.com",
+    projectId: "musicrecommend-c0498",
+    storageBucket: "musicrecommend-c0498.appspot.com",
+    messagingSenderId: "20112939467",
+    appId: "1:20112939467:web:dc417a49069b1c402e7e4e"
+};
+
+// 파이어베이스 초기화 (이미 초기화되지 않았을 때만)
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
+const messaging = firebase.messaging();
+
+// 2. 알림 권한 요청 및 토큰 발급 함수
+function requestWebNotificationPermission() {
+    console.log("알림 권한을 요청합니다...");
+
+    Notification.requestPermission().then((permission) => {
+        if (permission === 'granted') {
+            console.log("알림 권한이 허용되었습니다!");
+            
+            // ⭐️ 여기에 아까 발급받은 VAPID KEY를 넣으세요 ⭐️
+            const vapidKey = "BLCD3S1nUVHykSOT-RWV0gbfJlb4JphfTfMWSH5Qa-zHtoKVdxZ5a6hF-qQfT8wdkm-Pi3AjZt-2OuoFEA1MgG4"; 
+
+            messaging.getToken({ vapidKey: vapidKey })
+                .then((currentToken) => {
+                    if (currentToken) {
+                        console.log("웹 FCM 토큰 발급 성공:", currentToken);
+                        
+                        // 서버 DB에 토큰 저장 (기존에 만들어두신 API 활용)
+                        saveTokenToServer(currentToken);
+                    } else {
+                        console.log("토큰을 가져올 수 없습니다. 등록을 확인하세요.");
+                    }
+                }).catch((err) => {
+                    console.log("토큰 가져오기 에러:", err);
+                });
+        } else {
+            console.log("사용자가 알림 권한을 거부했습니다.");
+        }
+    });
+}
+
+// 3. 서버로 토큰을 전송하는 함수 (기존 receiveTokenFromAndroid와 거의 동일)
+function saveTokenToServer(token) {
+    const formData = new FormData();
+    formData.append('fcm_token', token);
+
+    fetch('../php/update_token.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.text())
+    .then(result => console.log('웹 토큰 DB 저장 완료:', result))
+    .catch(error => console.error('웹 토큰 저장 실패:', error));
+}
+
+// 4. 페이지가 로드될 때 알림 권한을 한 번 물어보도록 실행
+document.addEventListener('DOMContentLoaded', () => {
+    // 브라우저가 알림을 지원하는지 확인 후 실행
+    if ('Notification' in window) {
+        requestWebNotificationPermission();
+    }
+});
