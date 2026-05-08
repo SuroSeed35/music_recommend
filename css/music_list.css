@@ -208,10 +208,6 @@ html {
     transition: bottom 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
 }
 
-.bottom-sheet.show {
-    bottom: 0; 
-}
-
 .drag-handle { 
     width: 100%; 
     height: 18px; 
@@ -309,18 +305,6 @@ html {
     white-space: normal;     /* 줄 바꿈 허용 */
 }
 
-/* 실질적인 그룹 리스트 스크롤 영역 */
-#real-group-list {
-    display: flex;
-    flex-direction: column;   /* 세로로 나열 */
-    max-height: 230px;        /* 💡 바텀 시트 안에서 스크롤이 생길 높이 제한 */
-    overflow-y: auto;         /* 세로 스크롤 활성화 */
-    padding-right: 5px;       /* 스크롤바와 내용 사이 여백 */
-    
-    /* 부드러운 스크롤 */
-    -webkit-overflow-scrolling: touch;
-}
-
 /* 깔끔한 디자인을 위해 스크롤바 숨기기 (선택 사항) */
 #real-group-list::-webkit-scrollbar {
     display: none;
@@ -347,4 +331,33 @@ html {
 /* 바텀 시트 하단 여백 보정 (아이폰 노치 등 대응) */
 .group-content-area {
     padding-bottom: calc(30px + env(safe-area-inset-bottom));
+}
+
+/* music_list.css 맨 하단에 추가 */
+#real-group-list {
+    display: flex;
+    flex-direction: column;
+    max-height: 220px; 
+    overflow-y: auto !important; /* 세로 스크롤 활성화 */
+    overflow-x: hidden;
+    
+    /* 💡 손가락 스크롤을 부드럽게 하고 시스템 제스처와 분리 */
+    -webkit-overflow-scrolling: touch; 
+    touch-action: pan-y !important; /* 세로 방향 터치만 허용 */
+}
+
+/* 💡 만약 부모 요소가 터치 이벤트를 먹고 있다면 추가 */
+.bottom-sheet {
+    /* 시트 전체가 손가락에 너무 민감하게 반응하여 리스트 스크롤을 막는 것 방지 */
+    touch-action: none; 
+}
+
+.bottom-sheet.show {
+    /* 시트가 열린 상태에서는 세로 방향 제스처만 허용 */
+    touch-action: pan-y;
+}
+
+/* 디자인을 위해 스크롤바 숨기기 */
+#real-group-list::-webkit-scrollbar {
+    display: none;
 }
