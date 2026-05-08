@@ -334,16 +334,53 @@ html {
 }
 
 /* music_list.css 맨 하단에 추가 */
+/* 실질적인 그룹 리스트 스크롤 영역 */
+/* 실질적인 그룹 리스트 스크롤 영역 (APK WebView 스크롤 강제 활성화) */
 #real-group-list {
     display: flex;
     flex-direction: column;
-    max-height: 220px; 
-    overflow-y: auto !important; /* 세로 스크롤 활성화 */
-    overflow-x: hidden;
     
-    /* 💡 손가락 스크롤을 부드럽게 하고 시스템 제스처와 분리 */
-    -webkit-overflow-scrolling: touch; 
-    touch-action: pan-y !important; /* 세로 방향 터치만 허용 */
+    /* 높이 제한: 바텀시트 350px 내에서 헤더/패딩 제외하고 240px 영역 확보 */
+    max-height: 240px;
+    
+    /* 🔥 핵심 1: scroll로 강제 (auto는 일부 WebView에서 인식 실패) */
+    overflow-y: scroll;
+    
+    /* iOS 부드러운 스크롤 */
+    -webkit-overflow-scrolling: touch;
+    
+    padding-right: 5px;
+    
+    /* 🔥 핵심 2: 이 영역의 세로 스와이프는 스크롤임을 브라우저에 명시 */
+    touch-action: pan-y;
+    
+    /* 🔥 핵심 3: 스크롤 끝 도달 시 부모로 전파 차단 (바운스 방지) */
+    overscroll-behavior: contain;
+    
+    /* 🔥 핵심 4: GPU 레이어 분리로 WebView 스크롤 안정화 */
+    will-change: scroll-position;
+    transform: translateZ(0);
+    
+    /* 텍스트 선택으로 인한 터치 충돌 방지 */
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* 스크롤바 숨김 (Webkit 기반) */
+#real-group-list::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+}
+
+/* Firefox 스크롤바 숨김 */
+#real-group-list {
+    scrollbar-width: none;
+}
+
+/* IE/구 Edge 스크롤바 숨김 */
+#real-group-list {
+    -ms-overflow-style: none;
 }
 
 /* 💡 만약 부모 요소가 터치 이벤트를 먹고 있다면 추가 */

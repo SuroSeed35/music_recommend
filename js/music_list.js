@@ -435,15 +435,56 @@ function changeMainGroup(groupId, groupName) {
 }
 
 // --- 7. 바텀 시트 제스처 ---
+// --- 7. 바텀 시트 제스처 ---
 function setupSwipeGesture() {
     const sheet = document.getElementById('bottomSheet');
-    if (!sheet) return;
+    const dragHandle = document.getElementById('dragHandle');
+    if (!sheet || !dragHandle) return;
+
+    // [1] 펼치기 동작: 화면 하단에서 위로 스와이프
+    //     ⚠️ 시트가 이미 열려있을 땐 동작 차단 → 내부 스크롤 보호
     let startY = 0;
-    document.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; }, { passive: true });
+    document.addEventListener('touchstart', (e) => {
+        // 시트가 열려있고 터치 시작 지점이 시트 내부면 펼치기 로직 무시
+        if (sheet.classList.contains('show') && sheet.contains(e.target)) return;
+        startY = e.touches[0].clientY;
+    }, { passive: true });
+
     document.addEventListener('touchend', (e) => {
+        // 시트가 이미 열려있으면 펼치기 로직 무시 (내부 스크롤 보호)
+        if (sheet.classList.contains('show')) return;
+
         const deltaY = startY - e.changedTouches[0].clientY;
-        if (startY > window.innerHeight * 0.7 && deltaY > 50) sheet.classList.add('show');
-        else if (deltaY < -50) sheet.classList.remove('show');
+        if (startY > window.innerHeight * 0.7 && deltaY > 50) {
+            sheet.classList.add('show');
+        }
+    }, { passive: true });
+
+    // [2] 닫기 동작 ①: 드래그 핸들에서 아래로 스와이프
+    let handleStartY = 0;
+    dragHandle.addEventListener('touchstart', (e) => {
+        handleStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    dragHandle.addEventListener('touchend', (e) => {
+        const deltaY = handleStartY - e.changedTouches[0].clientY;
+        if (deltaY < -50) {
+            sheet.classList.remove('show');
+        }
+    }, { passive: true });
+
+    // [3] 닫기 동작 ②: 시트 외부 영역 탭 시 닫기
+    //     ⚠️ touchend 사용 (click은 모바일에서 300ms 딜레이 + 일부 WebView에서 누락)
+    document.addEventListener('touchend', (e) => {
+        // 시트가 닫혀있으면 무시
+        if (!sheet.classList.contains('show')) return;
+        // 시트 내부 터치는 무시 (내부 동작 보호)
+        if (sheet.contains(e.target)) return;
+        // 사이드바 버튼 터치는 무시 (사이드바 동작 우선)
+        const sideBar = document.querySelector('.side-bar-container');
+        if (sideBar && sideBar.contains(e.target)) return;
+
+        sheet.classList.remove('show');
     }, { passive: true });
 }
 
