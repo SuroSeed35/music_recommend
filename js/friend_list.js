@@ -307,13 +307,42 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- [8] 기타 리스너 ---
     document.getElementById('friendSearchInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') fetchAndDisplayUsers(e.target.value.trim()); });
     
+    // ▼▼▼ 이 부분을 찾아 아래 코드로 통째로 교체하세요 ▼▼▼
     document.getElementById('submitGroupFinal').addEventListener('click', async () => {
         const gName = document.getElementById('groupNameInput').value;
         if (!gName) return alert("이름을 입력하세요!");
+        
         const memberIds = selectedGroupMembers.map(m => m.id);
-        await fetch('../php/api.php?action=create_group', { method: 'POST', body: JSON.stringify({ group_name: gName, members: memberIds }) });
-        document.getElementById('groupNameModal').style.display = 'none';
-        switchMode('LIST');
+
+        try {
+            // 서버로 요청 전송
+            const response = await fetch('../php/api.php?action=create_group', { 
+                method: 'POST', 
+                headers: { 
+                    'Content-Type': 'application/json' // 🔥 필수: 서버에 JSON 형태라고 알려줌 
+                },
+                body: JSON.stringify({ group_name: gName, members: memberIds }) 
+            });
+
+            // 1. 서버의 응답을 먼저 글자(text)로 받아서 확인합니다 (디버깅용)
+            const text = await response.text();
+            console.log("서버 원본 응답:", text);
+
+            // 2. 받은 응답을 JSON으로 변환
+            const result = JSON.parse(text);
+
+            // 3. 서버에서 성공(success: true)했다고 하면 화면 전환
+            if (result.success) {
+                document.getElementById('groupNameModal').style.display = 'none';
+                switchMode('LIST'); // 이 함수가 실행되면서 loadData()를 호출해 목록을 새로고침합니다.
+            } else {
+                // 실패 시 서버가 보낸 에러 메시지 알림
+                alert("그룹 생성 실패: " + (result.message || result.error || "원인을 알 수 없습니다."));
+            }
+        } catch (err) {
+            console.error("통신 에러 상세:", err);
+            alert("서버와 통신 중 문제가 발생했습니다. F12 콘솔 창을 확인해주세요.");
+        }
     });
 
     document.querySelectorAll('.close-x-btn, .modal-btn.cancel').forEach(btn => {

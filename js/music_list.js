@@ -278,8 +278,8 @@ async function loadMyInfoIntoGroup() {
     const groupListContainer = document.getElementById("real-group-list");
     if (!groupListContainer) return;
 
-    groupListContainer.innerHTML = ""; 
-
+    groupListContainer.className = "group-list-container";
+    
     try {
         // [수정 완료] 캐시 방지 시간값 추가
         const userRes = await fetch('../php/get_user_info.php?t=' + new Date().getTime());
