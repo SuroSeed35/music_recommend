@@ -10,29 +10,54 @@ document.addEventListener('DOMContentLoaded', () => {
     const contributionGrid = document.getElementById('contributionGrid');
     const backBtn = document.getElementById("backToMain");
     const logoutBtn = document.getElementById('logout-btn');
-    
+    // --- [모달 요소 가져오기] ---
+    const logoutConfirmModal = document.getElementById('logoutConfirmModal');
+    const logoutCancelBtn = document.getElementById('logoutCancelBtn');
+    const logoutProceedBtn = document.getElementById('logoutProceedBtn');
+
+    // --- [로그아웃 흐름 제어] ---
     if (logoutBtn) {
+        // 1. 마이페이지에서 로그아웃 버튼 클릭 시 -> 모달 띄우기
         logoutBtn.addEventListener('click', () => {
-            if (confirm('정말 로그아웃 하시겠습니까?')) {
-                // php 폴더의 logout.php로 요청 전송
-                fetch('../php/logout.php')
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status === 'success') {
-                            alert(data.message);
-                            // 로그아웃 성공 시 로그인 페이지로 리다이렉트
-                            window.location.href = 'login.html'; 
-                        } else {
-                            alert('로그아웃 처리에 실패했습니다. 다시 시도해 주세요.');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error during logout:', error);
-                        alert('서버와 통신 중 오류가 발생했습니다.');
-                    });
-            }
+            logoutConfirmModal.classList.remove('hidden');
         });
     }
+
+    if (logoutCancelBtn) {
+        // 2. 모달에서 '취소' 클릭 시 -> 모달 닫기
+        logoutCancelBtn.addEventListener('click', () => {
+            logoutConfirmModal.classList.add('hidden');
+        });
+    }
+
+    if (logoutProceedBtn) {
+        // 3. 모달에서 '로그아웃' 클릭 시 -> 진짜 로그아웃 실행
+        logoutProceedBtn.addEventListener('click', () => {
+            logoutConfirmModal.classList.add('hidden'); // 일단 모달 닫기
+
+            // php 서버로 통신
+            fetch('../php/logout.php')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // 성공 시 기존에 만들어둔 1버튼 알림 모달 사용
+                        showModal("로그아웃 되었습니다.");
+                        
+                        // 모달 메시지를 읽을 수 있도록 1.2초 대기 후 로그인 창으로 자동 이동
+                        setTimeout(() => {
+                            window.location.href = 'login.html'; 
+                        }, 1200);
+                    } else {
+                        showModal('로그아웃 처리에 실패했습니다. 다시 시도해 주세요.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error during logout:', error);
+                    showModal('서버와 통신 중 오류가 발생했습니다.');
+                });
+        });
+    }
+    
     if (backBtn) {
         backBtn.onclick = () => {
             // 프로젝트 구조에 맞게 메인 페이지 경로를 확인하세요.

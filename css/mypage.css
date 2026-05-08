@@ -300,24 +300,90 @@ body {
 
 /* 로그아웃 버튼 영역 */
 .logout-container {
-    text-align: center;
+    width: 100%;
+    padding: 0 20px; /* 좌우 여백을 주어 화면에 너무 딱 붙지 않게 조절 */
+    box-sizing: border-box;
     margin-top: 40px;
-    margin-bottom: 20px;
+    margin-bottom: 30px;
 }
 
-/* 로그아웃 버튼 스타일 */
+/* 로그아웃 버튼 스타일 (가로로 길게) */
 .logout-btn {
-    background-color: #ff4d4d; 
+    width: 100%; /* 컨테이너 영역을 100% 꽉 채움 */
+    background-color: #4b9ad7; /* 빨간색 (원하시는 테마 색상으로 변경 가능) */
     color: #ffffff;
     border: none;
-    padding: 10px 25px;
+    padding: 12px 0; /* 위아래 공간을 넓혀서 터치/클릭하기 편하게 */
+    border-radius: 12px; /* 모서리를 약간 둥글게 */
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* 투 버튼 모달 그룹 정렬 */
+.modal-btn-group {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* 버튼 공통 스타일 */
+.modal-btn-group button {
+    flex: 1; /* 두 버튼이 정확히 반반씩 너비를 가지게 함 */
+    padding: 12px 0;
     border-radius: 8px;
     font-size: 15px;
     font-weight: bold;
     cursor: pointer;
-    transition: background-color 0.2s ease-in-out;
+    border: none;
+    transition: background-color 0.2s;
 }
 
-.logout-btn:hover {
-    background-color: #e60000;
+/* 취소 버튼 (회색) */
+.cancel-btn {
+    background-color: #f0f0f0;
+    color: #555;
+}
+
+/* 실행/로그아웃 버튼 (빨간색 포인트) */
+.proceed-btn {
+    background-color: #3b7fb3;
+    color: white;
+}
+
+/* 로그아웃 모달 - 화면 전체 덮기 & 무조건 중앙 정렬 */
+#logoutConfirmModal {
+    position: fixed !important; /* 브라우저 화면 기준 고정 */
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important; /* 화면 가로 꽉 채우기 */
+    height: 100vh !important; /* 화면 세로 꽉 채우기 */
+    background-color: rgba(0, 0, 0, 0.5) !important; /* 반투명 검은 배경 */
+    
+    /* 요소들을 정중앙으로 모으는 Flex 속성 */
+    display: flex !important;
+    justify-content: center !important; 
+    align-items: center !important; 
+    
+    z-index: 9999 !important; /* 다른 모든 화면보다 맨 위에 표시 */
+    margin: 0 !important;
+}
+
+/* 모달이 숨겨져야 할 때 */
+#logoutConfirmModal.hidden {
+    display: none !important;
+}
+
+/* 가운데 뜨는 하얀색 알림 박스 */
+#logoutConfirmModal .modal-content {
+    background-color: #ffffff;
+    width: 80%;
+    max-width: 320px; /* 너무 넓어지지 않게 방지 */
+    padding: 25px 20px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    box-sizing: border-box;
+    margin: 0 !important; /* 위치를 틀어지게 하는 마진 제거 */
 }

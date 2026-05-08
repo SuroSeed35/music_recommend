@@ -69,6 +69,9 @@
                 </div>
             </div>
         </section>
+        <div class="logout-container">
+            <button id="logout-btn" class="logout-btn">로그아웃</button>
+        </div>
     </div>
 
     <!-- editModal 내부 수정[cite: 11] -->
@@ -123,8 +126,14 @@
         </div>
     </div>
 
-    <div class="logout-container">
-        <button id="logout-btn" class="logout-btn">로그아웃</button>
+    <div id="logoutConfirmModal" class="modal hidden">
+        <div class="modal-content">
+            <p>정말 로그아웃 하시겠습니까?</p>
+            <div class="modal-btn-group">
+                <button id="logoutCancelBtn" class="cancel-btn">취소</button>
+                <button id="logoutProceedBtn" class="confirm-btn proceed-btn">로그아웃</button>
+            </div>
+        </div>
     </div>
 
     <script src="../js/mypage.js"></script>
