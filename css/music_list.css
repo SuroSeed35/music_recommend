@@ -190,12 +190,14 @@ html {
 }
 
 /* --- 6. 바텀 시트 --- */
+/* 🔥 [수정됨] 3단계 상태 머신(closed / half / full) 지원 */
 .bottom-sheet { 
     position: fixed; 
-    bottom: -332px; 
     left: 0; 
     width: 100%; 
-    height: 350px; 
+    /* 🔥 [수정] height를 75vh로 늘리고 transform 기반 위치 제어로 변경 */
+    height: 75vh;
+    max-height: 75vh;
     background: linear-gradient(to top, #ffffff 0%, #ffffffcc 100%);
     /* 👇 좌측, 우측, 하단 테두리를 없애고 위쪽 선만 남겼습니다 */
     border-top: 1px solid #313131; 
@@ -205,7 +207,29 @@ html {
     border-radius: 32px 32px 0 0; 
     z-index: 2000; 
     box-shadow: 0 -5px 25px rgba(0,0,0,0.1); 
-    transition: bottom 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+    /* 🔥 [수정] transition을 bottom → transform으로 변경 (GPU 가속) */
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+    /* 🔥 [추가] 시트 내부를 flex 컨테이너로 (내부 스크롤 영역이 자연스럽게 늘어나도록) */
+    display: flex;
+    flex-direction: column;
+    /* 🔥 [추가] 기본 위치 = closed: 핸들(18px)만 살짝 보임 */
+    bottom: 0;
+    transform: translateY(calc(100% - 18px));
+}
+
+/* 🔥 [추가] half 상태: 기존 350px 노출 (75vh 중 350px만 화면에 보임) */
+.bottom-sheet.state-half {
+    transform: translateY(calc(75vh - 350px));
+}
+
+/* 🔥 [추가] full 상태: 75vh 전체 노출 */
+.bottom-sheet.state-full {
+    transform: translateY(0);
+}
+
+/* 🔥 [수정] 기존 .show 클래스 호환성 유지 — half와 동일하게 동작 */
+.bottom-sheet.show {
+    transform: translateY(calc(75vh - 350px));
 }
 
 .drag-handle { 
@@ -305,6 +329,22 @@ html {
     white-space: normal;     /* 줄 바꿈 허용 */
 }
 
+/* 실질적인 그룹 리스트 스크롤 영역 */
+/* 🔥 [수정됨] max-height 제거 → 시트 상태에 따라 flex로 자연스럽게 확장 */
+#real-group-list {
+    display: flex;
+    flex-direction: column;   /* 세로로 나열 */
+    /* 🔥 [수정] max-height: 230px 제거 → flex: 1 로 변경 */
+    flex: 1;                  /* 시트 내부 공간을 모두 차지하여 full 상태에서 더 많이 보임 */
+    overflow-y: auto;         /* 세로 스크롤 활성화 */
+    padding-right: 5px;       /* 스크롤바와 내용 사이 여백 */
+    
+    /* 부드러운 스크롤 */
+    -webkit-overflow-scrolling: touch;
+    /* 🔥 [추가] 시트 제스처와 충돌 방지: 스크롤 끝에 도달해도 부모로 전파 안 함 */
+    overscroll-behavior: contain;
+}
+
 /* 깔끔한 디자인을 위해 스크롤바 숨기기 (선택 사항) */
 #real-group-list::-webkit-scrollbar {
     display: none;
@@ -329,72 +369,12 @@ html {
 }
 
 /* 바텀 시트 하단 여백 보정 (아이폰 노치 등 대응) */
+/* 🔥 [수정됨] flex 컨테이너로 만들어 내부 스크롤 영역(#real-group-list)이 자연스럽게 늘어나도록 */
 .group-content-area {
     padding-bottom: calc(30px + env(safe-area-inset-bottom));
-}
-
-/* music_list.css 맨 하단에 추가 */
-/* 실질적인 그룹 리스트 스크롤 영역 */
-/* 실질적인 그룹 리스트 스크롤 영역 (APK WebView 스크롤 강제 활성화) */
-#real-group-list {
+    /* 🔥 [추가] flex로 늘어나면서 내부 스크롤 영역 공간 확보 */
+    flex: 1;
     display: flex;
     flex-direction: column;
-    
-    /* 높이 제한: 바텀시트 350px 내에서 헤더/패딩 제외하고 240px 영역 확보 */
-    max-height: 240px;
-    
-    /* 🔥 핵심 1: scroll로 강제 (auto는 일부 WebView에서 인식 실패) */
-    overflow-y: scroll;
-    
-    /* iOS 부드러운 스크롤 */
-    -webkit-overflow-scrolling: touch;
-    
-    padding-right: 5px;
-    
-    /* 🔥 핵심 2: 이 영역의 세로 스와이프는 스크롤임을 브라우저에 명시 */
-    touch-action: pan-y;
-    
-    /* 🔥 핵심 3: 스크롤 끝 도달 시 부모로 전파 차단 (바운스 방지) */
-    overscroll-behavior: contain;
-    
-    /* 🔥 핵심 4: GPU 레이어 분리로 WebView 스크롤 안정화 */
-    will-change: scroll-position;
-    transform: translateZ(0);
-    
-    /* 텍스트 선택으로 인한 터치 충돌 방지 */
-    -webkit-user-select: none;
-    user-select: none;
-}
-
-/* 스크롤바 숨김 (Webkit 기반) */
-#real-group-list::-webkit-scrollbar {
-    display: none;
-    width: 0;
-    height: 0;
-}
-
-/* Firefox 스크롤바 숨김 */
-#real-group-list {
-    scrollbar-width: none;
-}
-
-/* IE/구 Edge 스크롤바 숨김 */
-#real-group-list {
-    -ms-overflow-style: none;
-}
-
-/* 💡 만약 부모 요소가 터치 이벤트를 먹고 있다면 추가 */
-.bottom-sheet {
-    /* 시트 전체가 손가락에 너무 민감하게 반응하여 리스트 스크롤을 막는 것 방지 */
-    touch-action: none; 
-}
-
-.bottom-sheet.show {
-    /* 시트가 열린 상태에서는 세로 방향 제스처만 허용 */
-    touch-action: pan-y;
-}
-
-/* 디자인을 위해 스크롤바 숨기기 */
-#real-group-list::-webkit-scrollbar {
-    display: none;
+    overflow: hidden;
 }

@@ -92,4 +92,14 @@ function sendFCMV1($token, $title, $body) {
 
     return $result;
 }
+
+// 🔥 [추가됨] 호환용 래퍼 함수
+// save_song.php와 api.php의 일부 케이스에서 sendFCM(...)을 호출하고 있어
+// 동일하게 동작하도록 sendFCMV1을 호출해주는 별칭 함수입니다.
+// 기존 호출부 코드를 한 줄도 수정하지 않아도 알림이 정상 발송됩니다.
+if (!function_exists('sendFCM')) {
+    function sendFCM($token, $title, $body) {
+        return sendFCMV1($token, $title, $body);
+    }
+}
 ?>

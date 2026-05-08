@@ -26,22 +26,6 @@ document.addEventListener("DOMContentLoaded", () => {
     restoreToggleStates(); 
 });
 
-const groupListScrollArea = document.getElementById("real-group-list");
-
-    if (groupListScrollArea) {
-        // 💡 손가락으로 밀었을 때(터치 이벤트) 처리
-        groupListScrollArea.addEventListener('touchstart', (e) => {
-            // 터치 시작 시 이벤트 전파 차단
-            e.stopPropagation();
-        }, { passive: true });
-
-        groupListScrollArea.addEventListener('touchmove', (e) => {
-            // 💡 중요: 리스트 내부에서 손가락을 움직일 때는 
-            // 바깥쪽 바텀 시트의 '스와이프 닫기' 로직이 실행되지 않게 차단합니다.
-            e.stopPropagation();
-        }, { passive: true });
-    }
-
 // --- 1. 날짜 포맷팅 함수 ---
 function formatDate(date) {
     const y = date.getFullYear();
@@ -85,7 +69,6 @@ function setupDateNavigation() {
         };
     }
 }
-
 
 // --- 4. 데이터 로드 (DB 연동) ---
 async function loadData() {
@@ -296,7 +279,7 @@ async function loadMyInfoIntoGroup() {
     if (!groupListContainer) return;
 
     groupListContainer.className = "group-list-container";
-
+    
     try {
         // [수정 완료] 캐시 방지 시간값 추가
         const userRes = await fetch('../php/get_user_info.php?t=' + new Date().getTime());
@@ -435,57 +418,103 @@ function changeMainGroup(groupId, groupName) {
 }
 
 // --- 7. 바텀 시트 제스처 ---
-// --- 7. 바텀 시트 제스처 ---
+// 🔥 [수정됨] 3단계 상태 머신: closed ↔ half ↔ full
 function setupSwipeGesture() {
     const sheet = document.getElementById('bottomSheet');
-    const dragHandle = document.getElementById('dragHandle');
-    if (!sheet || !dragHandle) return;
+    if (!sheet) return;
 
-    // [1] 펼치기 동작: 화면 하단에서 위로 스와이프
-    //     ⚠️ 시트가 이미 열려있을 땐 동작 차단 → 내부 스크롤 보호
+    // 상태: 'closed' | 'half' | 'full'
+    let currentState = 'closed';
+
+    // 터치 시작 정보
     let startY = 0;
+    let startTarget = null;
+    let isInsideScroll = false; // 시작점이 그룹 리스트(스크롤 영역) 내부였는지
+
+    const groupList = document.getElementById('real-group-list');
+
+    // 상태 전이 적용 (DOM 클래스 토글)
+    const applyState = (next) => {
+        if (next === currentState) return;
+        sheet.classList.remove('state-closed', 'state-half', 'state-full', 'show');
+        if (next === 'half') {
+            sheet.classList.add('state-half');
+        } else if (next === 'full') {
+            sheet.classList.add('state-full');
+        }
+        // closed 상태는 클래스 없는 것이 기본 (CSS의 transform 기본값)
+        currentState = next;
+    };
+
+    // 상태 전이 규칙
+    const transition = (direction) => {
+        // direction: 'up' | 'down'
+        if (direction === 'up') {
+            if (currentState === 'closed') applyState('half');
+            else if (currentState === 'half') applyState('full');
+            // full 상태에서 위로 스와이프는 무시
+        } else if (direction === 'down') {
+            if (currentState === 'full') applyState('half');
+            else if (currentState === 'half') applyState('closed');
+            // closed 상태에서 아래로 스와이프는 무시
+        }
+    };
+
+    // === 터치 시작 ===
     document.addEventListener('touchstart', (e) => {
-        // 시트가 열려있고 터치 시작 지점이 시트 내부면 펼치기 로직 무시
-        if (sheet.classList.contains('show') && sheet.contains(e.target)) return;
         startY = e.touches[0].clientY;
+        startTarget = e.target;
+
+        // 시작점이 그룹 리스트 내부인지 검사 (스크롤 위임 판단용)
+        isInsideScroll = !!(groupList && groupList.contains(startTarget));
     }, { passive: true });
 
+    // === 터치 종료 ===
     document.addEventListener('touchend', (e) => {
-        // 시트가 이미 열려있으면 펼치기 로직 무시 (내부 스크롤 보호)
-        if (sheet.classList.contains('show')) return;
+        const endY = e.changedTouches[0].clientY;
+        const deltaY = startY - endY; // 양수=위로, 음수=아래로
+        const THRESHOLD = 50; // 임계값 (px)
 
-        const deltaY = startY - e.changedTouches[0].clientY;
-        if (startY > window.innerHeight * 0.7 && deltaY > 50) {
-            sheet.classList.add('show');
+        // 임계값 미달이면 무시
+        if (Math.abs(deltaY) < THRESHOLD) return;
+
+        const direction = deltaY > 0 ? 'up' : 'down';
+
+        // === 내부 스크롤 위임 판단 ===
+        // 시트가 full 상태이고, 시작점이 스크롤 영역 안이며,
+        // 스크롤이 끝에 도달하지 않은 경우 → 시트 제스처 무시 (내부 스크롤 우선)
+        if (currentState === 'full' && isInsideScroll && groupList) {
+            const canScrollDown = groupList.scrollTop + groupList.clientHeight < groupList.scrollHeight - 1;
+            const canScrollUp   = groupList.scrollTop > 0;
+
+            // 위로 스와이프(콘텐츠를 위로 = 아래로 스크롤) 가능 → 시트 무시
+            if (direction === 'up' && canScrollDown) return;
+            // 아래로 스와이프 시: 스크롤이 맨 위가 아니라면 스크롤 우선
+            if (direction === 'down' && canScrollUp) return;
         }
-    }, { passive: true });
 
-    // [2] 닫기 동작 ①: 드래그 핸들에서 아래로 스와이프
-    let handleStartY = 0;
-    dragHandle.addEventListener('touchstart', (e) => {
-        handleStartY = e.touches[0].clientY;
-    }, { passive: true });
-
-    dragHandle.addEventListener('touchend', (e) => {
-        const deltaY = handleStartY - e.changedTouches[0].clientY;
-        if (deltaY < -50) {
-            sheet.classList.remove('show');
+        // === 시트 외부에서의 시작 제약 ===
+        // closed 상태일 때 위로 스와이프는, 시트 위에서 시작하거나 화면 하단에서 시작한 경우만 인정
+        // (화면 중앙에서 시작한 스와이프로 시트가 갑자기 뜨는 것 방지 - 기존 동작 호환)
+        if (currentState === 'closed' && direction === 'up') {
+            const startedFromSheet = sheet.contains(startTarget);
+            const startedFromBottom = startY > window.innerHeight * 0.7;
+            if (!startedFromSheet && !startedFromBottom) return;
         }
+
+        // 상태 전이 실행
+        transition(direction);
     }, { passive: true });
 
-    // [3] 닫기 동작 ②: 시트 외부 영역 탭 시 닫기
-    //     ⚠️ touchend 사용 (click은 모바일에서 300ms 딜레이 + 일부 WebView에서 누락)
-    document.addEventListener('touchend', (e) => {
-        // 시트가 닫혀있으면 무시
-        if (!sheet.classList.contains('show')) return;
-        // 시트 내부 터치는 무시 (내부 동작 보호)
-        if (sheet.contains(e.target)) return;
-        // 사이드바 버튼 터치는 무시 (사이드바 동작 우선)
-        const sideBar = document.querySelector('.side-bar-container');
-        if (sideBar && sideBar.contains(e.target)) return;
-
-        sheet.classList.remove('show');
-    }, { passive: true });
+    // === 핸들 클릭(탭)으로도 단계 전환 (데스크톱 보강) ===
+    const handle = document.getElementById('dragHandle');
+    if (handle) {
+        handle.addEventListener('click', () => {
+            if (currentState === 'closed') applyState('half');
+            else if (currentState === 'half') applyState('full');
+            else if (currentState === 'full') applyState('closed');
+        });
+    }
 }
 
 // --- 8. 사이드바 이벤트 ---

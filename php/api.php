@@ -114,7 +114,8 @@ switch ($action) {
 
         if (mysqli_query($conn, "INSERT INTO club_groups (group_name) VALUES ('$g_name')")) {
             $new_group_id = mysqli_insert_id($conn);
-            include_once 'fcm_v1_send.php';
+            // 🔥 [수정됨] 존재하지 않는 'fcm_v1_send.php' → 실제 파일 'fcm_send.php'로 변경
+            include_once 'fcm_send.php';
             $me = mysqli_fetch_assoc(mysqli_query($conn, "SELECT username FROM users WHERE user_id = $my_id"));
 
             foreach ($members as $m_id) {
