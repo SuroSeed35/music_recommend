@@ -74,7 +74,7 @@ switch ($action) {
         if (mysqli_num_rows($check_res) == 0) {
             $sql = "INSERT INTO friends (user_id, friend_id, status) VALUES ($my_id, $target_id, 'pending')";
             if (mysqli_query($conn, $sql)) {
-                include_once 'fcm_send.php';
+                include_once 'fcm_v1_send.php';
                 $target = mysqli_fetch_assoc(mysqli_query($conn, "SELECT fcm_token FROM users WHERE user_id = $target_id"));
                 $me = mysqli_fetch_assoc(mysqli_query($conn, "SELECT username FROM users WHERE user_id = $my_id"));
                 if ($target['fcm_token']) {
@@ -97,7 +97,7 @@ switch ($action) {
             include_once 'fcm_send.php';
             $me = mysqli_fetch_assoc(mysqli_query($conn, "SELECT username FROM users WHERE user_id = $my_id"));
             if ($target_data && !empty($target_data['fcm_token'])) {
-                sendFCM($target_data['fcm_token'], "친구 수락 완료! 🎉", "{$me['username']}님이 친구 요청을 수락했어요!");
+                sendFCMV1($target_data['fcm_token'], "친구 수락 완료! 🎉", "{$me['username']}님이 친구 요청을 수락했어요!");
             }
             echo json_encode(["success" => true]);
         } else { echo json_encode(["success" => false]); }

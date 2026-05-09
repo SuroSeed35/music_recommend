@@ -43,7 +43,7 @@ try {
             mysqli_query($conn, "UPDATE users SET current_song_id = '$last_id' WHERE user_id = '$user_id'");
 
             // ⭐️ 4. 저장이 성공했으니 이제 친구들에게 알림을 쏩니다!
-            include_once 'fcm_send.php';
+            include_once 'fcm_v1_send.php';
 
             // 내 친구들 중 FCM 토큰이 있는 사람 목록 가져오기
             $friend_sql = "SELECT u.fcm_token FROM friends f 
@@ -59,7 +59,7 @@ try {
 
             // 친구들에게 한 명씩 발송
             while($friend = mysqli_fetch_assoc($friend_res)) {
-                sendFCM($friend['fcm_token'], "새로운 노래 추천! 🎵", "{$my_name}님이 오늘의 노래를 추천했습니다: {$title}");
+                sendFCMV1($friend['fcm_token'], "새로운 노래 추천! 🎵", "{$my_name}님이 오늘의 노래를 추천했습니다: {$title}");
             }
 
             $response = ['success' => true];
