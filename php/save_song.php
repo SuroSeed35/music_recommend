@@ -59,7 +59,8 @@ try {
 
             // 친구들에게 한 명씩 발송
             while($friend = mysqli_fetch_assoc($friend_res)) {
-                sendFCMV1($friend['fcm_token'], "새로운 노래 추천! 🎵", "{$my_name}님이 오늘의 노래를 추천했습니다: {$title}");
+                // 알림 내용 양식 수정: "[이름]님이 오늘의 노래를 추천했습니다![제목]"
+                sendFCMV1($friend['fcm_token'], "새로운 노래 추천", "{$my_name}님이 오늘의 노래를 추천했습니다![{$title}]");
             }
 
             $response = ['success' => true];

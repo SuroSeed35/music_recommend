@@ -77,8 +77,8 @@ switch ($action) {
                 include_once 'fcm_v1_send.php';
                 $target = mysqli_fetch_assoc(mysqli_query($conn, "SELECT fcm_token FROM users WHERE user_id = $target_id"));
                 $me = mysqli_fetch_assoc(mysqli_query($conn, "SELECT username FROM users WHERE user_id = $my_id"));
-                if ($target['fcm_token']) {
-                    sendFCM($target['fcm_token'], "새로운 친구 요청!", "{$me['username']}님이 친구 신청을 보냈어요!");
+                if (!empty($target['fcm_token'])) {
+                    sendFCMV1($target['fcm_token'], "친구 요청", "{$me['username']}님이 친구 신청을 보냈어요!");
                 }
                 echo json_encode(["success" => true]);
             }
@@ -94,16 +94,15 @@ switch ($action) {
         $target_data = mysqli_fetch_assoc($find_res);
         
         if (mysqli_query($conn, "UPDATE friends SET status = 'accepted' WHERE friendship_id = $f_id")) {
-            include_once 'fcm_send.php';
+            include_once 'fcm_v1_send.php';
             $me = mysqli_fetch_assoc(mysqli_query($conn, "SELECT username FROM users WHERE user_id = $my_id"));
             if ($target_data && !empty($target_data['fcm_token'])) {
-                sendFCMV1($target_data['fcm_token'], "친구 수락 완료! 🎉", "{$me['username']}님이 친구 요청을 수락했어요!");
+                sendFCMV1($target_data['fcm_token'], "친구 수락", "{$me['username']}님이 친구 요청을 수락했어요.");
             }
             echo json_encode(["success" => true]);
         } else { echo json_encode(["success" => false]); }
         break;
 
-    // music_recommend/php/api.php 내 create_group 케이스 수정
     case 'create_group':
         ob_start();
         $data = json_decode(file_get_contents('php://input'), true);
@@ -114,19 +113,23 @@ switch ($action) {
 
         if (mysqli_query($conn, "INSERT INTO club_groups (group_name) VALUES ('$g_name')")) {
             $new_group_id = mysqli_insert_id($conn);
-            // 🔥 [수정됨] 존재하지 않는 'fcm_v1_send.php' → 실제 파일 'fcm_send.php'로 변경
-            include_once 'fcm_send.php';
-            $me = mysqli_fetch_assoc(mysqli_query($conn, "SELECT username FROM users WHERE user_id = $my_id"));
+            include_once 'fcm_v1_send.php';
+            $me = mysqli_fetch_assoc(mysqli_query($conn, "SELECT username, fcm_token FROM users WHERE user_id = $my_id"));
+
+            // 방장(본인)에게 그룹 생성 완료 알림
+            if (!empty($me['fcm_token'])) {
+                sendFCMV1($me['fcm_token'], "그룹 생성", "[{$g_name}] 그룹이 생성되었습니다!");
+            }
 
             foreach ($members as $m_id) {
                 $role = ((int)$m_id == $my_id) ? 'admin' : 'member';
                 mysqli_query($conn, "INSERT INTO group_members (group_id, user_id, role) VALUES ($new_group_id, $m_id, '$role')");
                 
-                // 🔥 나를 제외한 초대된 멤버들에게 실제 알림 발송
+                // 초대받은 멤버들에게 알림 발송
                 if ((int)$m_id != $my_id) {
                     $target = mysqli_fetch_assoc(mysqli_query($conn, "SELECT fcm_token FROM users WHERE user_id = $m_id"));
                     if (!empty($target['fcm_token'])) {
-                        sendFCMV1($target['fcm_token'], "새로운 그룹 초대! 🤝", "{$me['username']}님이 '{$g_name}' 그룹에 초대했습니다.");
+                        sendFCMV1($target['fcm_token'], "그룹 초대", "'[{$g_name}]' 그룹에 초대되었습니다!");
                     }
                 }
             }
