@@ -252,3 +252,21 @@ document.addEventListener('DOMContentLoaded', () => {
         requestWebNotificationPermission();
     }
 });
+
+// script.js 에 추가
+function receiveTokenFromAndroid(token) {
+    const formData = new FormData();
+    formData.append('fcm_token', token);
+
+    fetch('../php/update_token.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.text())
+    .then(result => {
+        // 결과가 Unauthorized면 아직 로그인을 안 한 것이므로 정상입니다. 
+        // 로그인 후 페이지가 넘어가면 MainActivity가 다시 이 함수를 호출해서 저장에 성공합니다.
+        console.log('안드로이드 토큰 DB 업데이트:', result);
+    })
+    .catch(error => console.error('토큰 업데이트 실패:', error));
+}
