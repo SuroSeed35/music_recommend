@@ -286,3 +286,14 @@ SET FOREIGN_KEY_CHECKS = 1;
 
 USE blabackspace;
 ALTER TABLE users ADD COLUMN fcm_token VARCHAR(255) DEFAULT NULL;
+
+CREATE TABLE email_verifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(100) NOT NULL,
+    code_hash VARCHAR(255) NOT NULL,
+    expires_at DATETIME NOT NULL,
+    is_verified TINYINT(1) DEFAULT 0,
+    attempts INT DEFAULT 0,          -- 무차별 대입 방지
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_email (email)
+);

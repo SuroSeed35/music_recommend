@@ -97,6 +97,16 @@ body {
     background-color: #333;
 }
 
+/* 회원가입 버튼 비활성 상태 (인증 전) */
+.submit-btn:disabled {
+    background-color: #ccc;
+    color: #888;
+    cursor: not-allowed;
+}
+.submit-btn:disabled:hover {
+    background-color: #ccc;
+}
+
 /* 하단 링크 */
 .footer-links {
     margin-top: 25px;
@@ -124,4 +134,133 @@ body {
     margin-bottom: 15px;
     padding-left: 5px;
     display: none; /* 평소에는 숨겨둠 */
+}
+
+/* =========================================================
+   이메일 인증 UI 스타일 (추가)
+   ========================================================= */
+
+/* 이메일 input + 인증 버튼 가로 배치 */
+.email-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+}
+
+.email-row input {
+    flex: 1;
+    min-width: 0; /* flex 아이템 안에서 input이 컨테이너 밖으로 넘치는 것 방지 */
+}
+
+/* 인증 / 확인 버튼 */
+.verify-btn {
+    flex-shrink: 0;
+    padding: 0 16px;
+    min-width: 72px;
+    background-color: #000;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    white-space: nowrap;
+}
+
+.verify-btn:hover:not(:disabled) {
+    background-color: #333;
+}
+
+.verify-btn:disabled {
+    background-color: #d1d1d1;
+    color: #888;
+    cursor: not-allowed;
+}
+
+/* 인증 완료된 input (초록 표시) */
+.input-verified {
+    background-color: #f0fdf4 !important;
+    border-color: #22c55e !important;
+    color: #15803d !important;
+}
+
+/* 코드 입력 섹션 메타 (타이머 + 재전송 버튼) */
+.code-group {
+    margin-top: -5px;
+    margin-bottom: 18px;
+}
+
+.code-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 6px;
+    padding: 0 4px;
+}
+
+/* 타이머 텍스트 */
+.timer-text {
+    font-size: 12px;
+    color: #666;
+    font-weight: 500;
+}
+
+.timer-urgent {
+    color: #ff4d4f;
+    font-weight: 700;
+    animation: pulse 1s infinite;
+}
+
+.timer-done {
+    color: #22c55e;
+    font-weight: 700;
+    animation: none;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* 재전송 버튼 (텍스트 링크 스타일) */
+.link-btn {
+    background: none;
+    border: none;
+    color: #000;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 4px 8px;
+    text-decoration: underline;
+}
+
+.link-btn:disabled {
+    color: #bbb;
+    cursor: not-allowed;
+    text-decoration: none;
+}
+
+/* 상태 메시지 (성공/실패/안내) */
+.status-msg {
+    font-size: 12px;
+    margin-top: 6px;
+    padding-left: 4px;
+    min-height: 16px;
+    line-height: 1.4;
+    text-align: left;
+}
+
+.status-success {
+    color: #22c55e;
+    font-weight: 600;
+}
+
+.status-error {
+    color: #ff4d4f;
+    font-weight: 600;
+}
+
+.status-info {
+    color: #666;
 }

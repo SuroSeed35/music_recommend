@@ -1,0 +1,18 @@
+# 민감 설정 파일 직접 접근 차단
+# 위치: php/ 폴더에 업로드 (mail_config.php, db_config.php와 같은 위치)
+
+<Files "mail_config.php">
+    Order allow,deny
+    Deny from all
+</Files>
+
+<Files "db_config.php">
+    Order allow,deny
+    Deny from all
+</Files>
+
+# 혹시 모를 .env, .ini 파일도 차단
+<FilesMatch "\.(env|ini|log|sql)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
