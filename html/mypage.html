@@ -61,6 +61,34 @@
                 
                 <div class="info-box">
                     <p id="recommendMsg">노래 정보를 불러오는 중...</p>
+                    <button id="editCommentBtn" class="edit-comment-btn" aria-label="한마디 수정">
+                        <img src="../img/pencil.png" alt="수정">
+                    </button>
+                </div>
+
+                <!-- 오늘의 한마디 수정 모달 -->
+                <div id="commentEditModal" class="modal-overlay hidden">
+                    <div class="modal-container">
+                        <div class="modal-header">
+                            <h2>오늘의 한마디 수정</h2>
+                            <button class="close-comment-x-btn"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="edit-row">
+                                <label>한마디</label>
+                                <div style="position: relative;">
+                                    <textarea id="editComment" class="edit-input" maxlength="50"
+                                        placeholder="오늘의 한 마디를 남겨주세요"
+                                        style="width:100%; box-sizing:border-box; resize:none; height:80px; padding-bottom:28px;"></textarea>
+                                    <div id="commentCharCount"
+                                        style="position:absolute; bottom:10px; right:12px; font-size:12px; color:#888;">0 / 50자</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button id="saveCommentBtn" class="confirm-btn">저장하기</button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="url-copy-box">

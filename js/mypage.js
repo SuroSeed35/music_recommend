@@ -202,6 +202,68 @@ if (saveBtn) {
 // 모달 닫기 버튼 로직
 const closeEditBtn = document.querySelector('.close-edit-x-btn');
 if (closeEditBtn) closeEditBtn.onclick = () => editModal.classList.add('hidden');
+    // --- [3-1] 오늘의 한마디 수정 로직 ---
+    const editCommentBtn = document.getElementById('editCommentBtn');
+    const commentEditModal = document.getElementById('commentEditModal');
+    const editCommentInput = document.getElementById('editComment');
+    const saveCommentBtn = document.getElementById('saveCommentBtn');
+    const commentCharCount = document.getElementById('commentCharCount');
+    const closeCommentBtn = document.querySelector('.close-comment-x-btn');
+    const recommendMsgEl = document.getElementById('recommendMsg');
+
+    // 연필 클릭 → 현재 한마디를 입력창에 채우고 모달 열기
+    if (editCommentBtn) {
+        editCommentBtn.onclick = () => {
+            const current = recommendMsgEl ? recommendMsgEl.innerText : '';
+            // 안내 문구가 떠 있는 경우엔 빈 값으로 시작
+            const placeholderTexts = [
+                '노래 정보를 불러오는 중...',
+                '작성된 한 줄 소감이 없습니다.'
+            ];
+            editCommentInput.value = placeholderTexts.includes(current) ? '' : current;
+            commentCharCount.innerText = `${editCommentInput.value.length} / 50자`;
+            commentEditModal.classList.remove('hidden');
+        };
+    }
+
+    // 글자 수 카운터
+    if (editCommentInput) {
+        editCommentInput.addEventListener('input', () => {
+            commentCharCount.innerText = `${editCommentInput.value.length} / 50자`;
+        });
+    }
+
+    // 모달 닫기 (X 버튼)
+    if (closeCommentBtn) {
+        closeCommentBtn.onclick = () => commentEditModal.classList.add('hidden');
+    }
+
+    // 저장 버튼 → 서버 전송
+    if (saveCommentBtn) {
+        saveCommentBtn.onclick = () => {
+            const newComment = editCommentInput.value.trim();
+
+            fetch('../php/update_comment.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ daily_comment: newComment })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    recommendMsgEl.innerText = newComment || "작성된 한 줄 소감이 없습니다.";
+                    commentEditModal.classList.add('hidden');
+                    showModal("오늘의 한마디가 수정되었습니다.");
+                } else {
+                    alert(data.message || "수정에 실패했습니다.");
+                }
+            })
+            .catch(err => {
+                console.error("한마디 수정 중 오류:", err);
+                alert("서버 통신 중 오류가 발생했습니다.");
+            });
+        };
+    }
 
     // --- [4] 잔디 그리드(기여도) 로직 ---
     function renderGrid() {
@@ -390,3 +452,4 @@ function loadSongForDate(dateObj) {
         })
         .catch(err => console.error("날짜별 노래 로드 에러:", err));
 }
+
