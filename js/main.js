@@ -125,11 +125,17 @@ actionBtn.onclick = async (e) => {
     formData.append('title', info.title);
     formData.append('thumb', `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`);
 
+    // ⏱️ 4초 안에 응답이 없으면 요청을 중단시키는 장치
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+
     fetch('../php/save_song.php', {
         method: 'POST',
-        body: formData
+        body: formData,
+        signal: controller.signal   // 타임아웃 연결
     })
     .then(async response => {
+        clearTimeout(timeoutId);     // 응답 왔으면 타이머 해제
         const text = await response.text(); 
         try {
             return JSON.parse(text); 
@@ -147,6 +153,12 @@ actionBtn.onclick = async (e) => {
         }
     })
     .catch(error => {
+        clearTimeout(timeoutId);
+        // ⏱️ 타임아웃(abort)으로 끊긴 경우: 저장 자체는 이미 됐으므로 그냥 이동
+        if (error.name === 'AbortError') {
+            window.location.href = "music_list.html";
+            return;
+        }
         console.error('상세 에러:', error);
         alert("오류 발생: " + error.message);
         actionBtn.innerText = "이 노래로 추천하기";
