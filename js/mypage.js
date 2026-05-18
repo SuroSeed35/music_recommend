@@ -238,6 +238,14 @@ if (closeEditBtn) closeEditBtn.onclick = () => editModal.classList.add('hidden')
         closeCommentBtn.onclick = () => commentEditModal.classList.add('hidden');
     }
 
+    if (commentEditModal) {
+        commentEditModal.onclick = (e) => {
+            if (e.target === commentEditModal) {
+                commentEditModal.classList.add('hidden');
+            }
+        };
+    }
+
     // 저장 버튼 → 서버 전송
     if (saveCommentBtn) {
         saveCommentBtn.onclick = () => {
@@ -404,12 +412,23 @@ if (closeEditBtn) closeEditBtn.onclick = () => editModal.classList.add('hidden')
     if (modalCloseX) modalCloseX.onclick = () => confirmModal.classList.add('hidden');
 });
 
+function updatePencilVisibility(hasSong, isToday) {
+    const penBtn = document.getElementById('editCommentBtn');
+    if (!penBtn) return;
+    // 오늘 + 노래 있음 일 때만 연필 노출 (오늘 곡만 수정 가능하므로)
+    penBtn.style.display = (hasSong && isToday) ? 'block' : 'none';
+}
+
 // --- [7] 특정 날짜 노래 정보 로드 함수 ---
 function loadSongForDate(dateObj) {
     const y = dateObj.getFullYear();
     const m = String(dateObj.getMonth() + 1).padStart(2, '0');
     const d = String(dateObj.getDate()).padStart(2, '0');
     const dateStr = `${y}-${m}-${d}`;
+
+    // 보고 있는 날짜가 '진짜 오늘'인지 판별
+    const realToday = new Date();
+    const isToday = (dateObj.toDateString() === realToday.toDateString());
 
     fetch(`../php/mypage_date_api.php?date=${dateStr}`)
         .then(res => res.json())
@@ -418,7 +437,7 @@ function loadSongForDate(dateObj) {
 
             const cardEl = document.getElementById('recommendationCard');
             let emptyMsgEl = document.getElementById('emptyDateMsg');
-            
+
             if (!emptyMsgEl && cardEl) {
                 emptyMsgEl = document.createElement('div');
                 emptyMsgEl.id = 'emptyDateMsg';
@@ -435,10 +454,12 @@ function loadSongForDate(dateObj) {
                     emptyMsgEl.innerText = "이 날 추천한 노래가 없습니다.";
                     emptyMsgEl.style.display = 'block';
                 }
+                // 노래 없음 → 연필 숨김
+                updatePencilVisibility(false, isToday);
             } else {
                 if (emptyMsgEl) emptyMsgEl.style.display = 'none';
                 if (cardEl) cardEl.style.display = 'block';
-                
+
                 const msgEl = document.getElementById('recommendMsg');
                 const urlInput = document.getElementById('youtubeUrl');
                 const videoLink = document.getElementById('videoLink');
@@ -448,6 +469,9 @@ function loadSongForDate(dateObj) {
                 if (urlInput) urlInput.value = data.youtube_url;
                 if (videoLink) videoLink.href = data.youtube_url;
                 if (thumbImg) thumbImg.src = data.thumbnail_img;
+
+                // 노래 있음 + 오늘일 때만 연필 노출
+                updatePencilVisibility(true, isToday);
             }
         })
         .catch(err => console.error("날짜별 노래 로드 에러:", err));
