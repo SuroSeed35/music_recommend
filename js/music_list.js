@@ -644,10 +644,20 @@ async function loadComments(songId) {
                 ? `<button class="comment-item-delete" data-id="${c.comment_id}">삭제</button>`
                 : '';
 
+            // 👇 [추가] 방 이름(group_name)이 있을 때만 유저 이름 옆에 회색 뱃지를 생성합니다.
+            // 나 혼자 있는 방이 아닐 때는 백엔드에서 group_name을 비워서 주므로 자동으로 안 뜹니다!
+            const groupBadge = c.group_name 
+                ? `<span style="font-size: 11px; color: #666; background: #e9ecef; padding: 2px 6px; border-radius: 8px; margin-left: 6px; font-weight: 600;">${escapeHtml(c.group_name)}</span>` 
+                : '';
+
+            // 👇 [수정] 헤더 구조를 정렬하여 이름 바로 옆에 뱃지가 붙도록 수정했습니다.
             item.innerHTML = `
                 <div class="comment-item-header">
-                    <span class="comment-item-user">${safeUser}</span>
-                    <div style="display:flex; align-items:center;">
+                    <div style="display: flex; align-items: center;">
+                        <span class="comment-item-user">${safeUser}</span>
+                        ${groupBadge}
+                    </div>
+                    <div style="display: flex; align-items: center;">
                         <span class="comment-item-time">${timeStr}</span>
                         ${deleteBtn}
                     </div>

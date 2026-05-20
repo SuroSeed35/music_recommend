@@ -168,6 +168,11 @@ switch ($action) {
             break; 
         }
 
+        // 현재 유저가 보고 있는 그룹 ID 가져오기
+        $user_info_res = mysqli_query($conn, "SELECT main_group_id FROM users WHERE user_id = $my_id");
+        $user_info = mysqli_fetch_assoc($user_info_res);
+        $current_group_id = $user_info['main_group_id'] ? (int)$user_info['main_group_id'] : 0;
+
         // 곡 주인 확인
         $owner_res = mysqli_query($conn, "SELECT user_id FROM songs WHERE song_id = $song_id");
         $owner_row = mysqli_fetch_assoc($owner_res);
@@ -191,14 +196,26 @@ switch ($action) {
             break; 
         }
 
-        // 댓글 목록 조회
-        $sql = "SELECT c.comment_id, c.user_id, c.content, c.created_at, 
+        $group_filter = "";
+        // 👇 [핵심 수정] 내 방(0)일 때는 방 이름을 가져옵니다.
+        $group_name_select = "IFNULL(cg.group_name, '내 방')";
+
+        if ($current_group_id > 0) {
+            $group_filter = " AND c.group_id = $current_group_id ";
+            // 👇 [핵심 수정] 특정 그룹 방일 때는 방 이름을 NULL로 비워버립니다!
+            $group_name_select = "NULL"; 
+        }
+
+        $sql = "SELECT c.comment_id, c.user_id, c.content, c.created_at, c.group_id, 
                        u.username, u.login_id,
+                       $group_name_select AS group_name,
                        IF(c.user_id = $my_id, 1, 0) AS is_mine
                 FROM song_comments c
                 JOIN users u ON c.user_id = u.user_id
-                WHERE c.song_id = $song_id AND c.is_deleted = 0
+                LEFT JOIN club_groups cg ON c.group_id = cg.group_id
+                WHERE c.song_id = $song_id AND c.is_deleted = 0 $group_filter
                 ORDER BY c.created_at ASC";
+                
         $res = mysqli_query($conn, $sql);
         $comments = mysqli_fetch_all($res, MYSQLI_ASSOC);
         echo json_encode(["success" => true, "comments" => $comments]);
@@ -218,6 +235,11 @@ switch ($action) {
             echo json_encode(["success" => false, "message" => "300자 이내로 입력하세요"]); 
             break; 
         }
+
+        // 👇 [추가] 현재 작성자가 위치한 방(그룹) ID 가져오기
+        $user_info_res = mysqli_query($conn, "SELECT main_group_id FROM users WHERE user_id = $my_id");
+        $user_info = mysqli_fetch_assoc($user_info_res);
+        $current_group_id = $user_info['main_group_id'] ? (int)$user_info['main_group_id'] : 0;
 
         // 곡 주인 확인
         $owner_res = mysqli_query($conn, "SELECT user_id FROM songs WHERE song_id = $song_id");
@@ -243,14 +265,18 @@ switch ($action) {
         }
 
         $safe_content = mysqli_real_escape_string($conn, $content);
-        $sql = "INSERT INTO song_comments (song_id, user_id, content) VALUES ($song_id, $my_id, '$safe_content')";
+        
+        // 👇 [수정] INSERT 문에 group_id 값($current_group_id)을 함께 저장합니다!
+        $sql = "INSERT INTO song_comments (song_id, user_id, group_id, content) 
+                VALUES ($song_id, $my_id, $current_group_id, '$safe_content')";
+                
         if (mysqli_query($conn, $sql)) {
             echo json_encode(["success" => true, "comment_id" => mysqli_insert_id($conn)]);
         } else {
             echo json_encode(["success" => false, "message" => "저장 실패"]);
         }
         break;
-
+        
     case 'delete_comment':
         $data = json_decode(file_get_contents('php://input'), true);
         $comment_id = (int)($data['comment_id'] ?? 0);
