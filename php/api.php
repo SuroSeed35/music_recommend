@@ -8,7 +8,8 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-$my_id = $_SESSION['user_id'];
+// (int)를 붙여서 숫자형으로 확실하게 변환해 줍니다.
+$my_id = (int)$_SESSION['user_id'];
 $action = $_GET['action'] ?? '';
 
 header('Content-Type: application/json');

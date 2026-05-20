@@ -562,3 +562,30 @@ html {
     background: #ccc;
     cursor: not-allowed;
 }
+
+/* 썸네일 이미지를 감싸는 부모 div에 position: relative; 가 꼭 있어야 합니다. */
+.thumbnail-wrapper {
+    position: relative;
+    /* 기존 스타일 유지 */
+}
+
+/* 썸네일 위 롤링 댓글 스타일 */
+.rolling-comment {
+    position: absolute;
+    bottom: 6px;
+    left: 6px;
+    background: rgba(0, 0, 0, 0.65); /* 반투명 검정 배경 */
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    max-width: 85%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* 글자가 길면 ... 처리 */
+    opacity: 0; 
+    transition: opacity 0.5s ease-in-out; /* 부드러운 페이드인/아웃 */
+    pointer-events: none; /* 터치/클릭 방해 금지 */
+    z-index: 10;
+}

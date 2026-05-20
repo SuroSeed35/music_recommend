@@ -14,6 +14,31 @@ style.innerHTML = `
         background-size: 400% 400%;
         animation: waveGradient 8s ease infinite;
     }
+    
+    /* 롤링 댓글 스타일 수정 */
+    .thumb-area { position: relative; }
+    .rolling-comment {
+        position: absolute;
+        bottom: 14px; /* [수정] 기존 6px에서 위로 더 띄움 */
+        left: 14px;   /* [수정] 기존 6px에서 오른쪽으로 더 이동 (여백 추가) */
+        
+        /* 💡 만약 아예 '오른쪽 아래' 구석에 배치하고 싶다면 위의 left: 14px; 대신 right: 14px; 를 적어주시면 됩니다! */
+        
+        background: rgba(255, 255, 255, 0.9); /* [수정] 배경 흰색 (90% 투명도) */
+        color: #222222;                       /* [수정] 글자색을 어두운 색으로 변경 */
+        padding: 5px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        max-width: 85%;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        opacity: 0; 
+        transition: opacity 0.5s ease-in-out;
+        pointer-events: none;
+        z-index: 10;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15); /* [추가] 흰색 배경이 썸네일 위에서 잘 보이도록 부드러운 그림자 추가 */
+    }
 `;
 document.head.appendChild(style);
 
@@ -147,6 +172,7 @@ function renderFeedSongs(songs) {
                 <div class="song-scroll-wrapper">
                     <div class="thumb-area" style="cursor: pointer;">
                         <img src="${song.thumbnail_img}" alt="thumbnail" class="thumb-img" onload="if(this.naturalWidth === 120 && this.src.includes('maxresdefault')) this.src = this.src.replace('maxresdefault', 'hqdefault');" onerror="if(this.src.includes('maxresdefault')) this.src = this.src.replace('maxresdefault', 'hqdefault');">
+                        <div class="rolling-comment" id="rolling-comment-${song.song_id}"></div>
                         <div class="video-info-overlay">
                             <div class="video-title" style="color: #ffffff;">${song.title || '제목 없음'}</div>
                         </div>
@@ -162,7 +188,7 @@ function renderFeedSongs(songs) {
                     </div>
                 </div>
             `;
-
+            
             const thumbArea = card.querySelector('.thumb-area');
             if (thumbArea && song.youtube_url) {
                 thumbArea.onclick = () => window.open(song.youtube_url, '_blank');
@@ -194,6 +220,10 @@ function renderFeedSongs(songs) {
         }
 
         container.appendChild(card);
+
+        if (song.song_id) {
+            startRollingComments(song.song_id);
+        }
     });
 }
 
@@ -549,6 +579,8 @@ function openCommentModal(songId) {
 
     overlay.classList.add('show');
     if (input) input.value = '';
+
+    checkCommentPermission();
     loadComments(songId);
 
     // 오버레이 바깥 클릭 시 닫기
@@ -686,7 +718,11 @@ function deleteComment(commentId) {
             const data = await res.json();
 
             if (data.success) {
-                await loadComments(currentCommentSongId);
+                await loadComments(currentCommentSongId); // 기존 댓글 목록 새로고침
+                
+                // 👇 이 부분이 추가되었습니다!
+                showToast('댓글이 삭제되었습니다.'); 
+                
             } else {
                 alert(data.message || '삭제 실패');
             }
@@ -724,4 +760,127 @@ function formatCommentTime(timestamp) {
     if (diffHr < 24) return `${diffHr}시간 전`;
     if (diffDay < 7) return `${diffDay}일 전`;
     return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// --- 토스트 알림 (하단에 연하게 떴다가 사라지는 알림) ---
+function showToast(message) {
+    const toast = document.createElement('div');
+    toast.innerText = message;
+    
+    // 토스트 스타일 설정 (하단 중앙 배치, 반투명 검정 배경, 둥근 모서리)
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 80px; /* 화면 하단에서의 높이 */
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: rgba(0, 0, 0, 0.65); /* 연한 검정 반투명 */
+        color: #fff;
+        padding: 12px 24px;
+        border-radius: 25px;
+        font-size: 14px;
+        font-weight: 500;
+        z-index: 10000;
+        opacity: 0;
+        transition: opacity 0.3s ease-in-out;
+        pointer-events: none; /* 클릭 방해 안 함 */
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    `;
+    
+    document.body.appendChild(toast);
+
+    // 약간의 딜레이 후 서서히 나타나게 함 (fade-in)
+    requestAnimationFrame(() => {
+        toast.style.opacity = '1';
+    });
+
+    // 2초 뒤에 서서히 사라지고 (fade-out), DOM에서 완전히 제거
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => document.body.removeChild(toast), 300);
+    }, 2000);
+}
+
+// 1. 오늘 날짜인지 체크하는 헬퍼 함수 (파일 상단이나 빈 곳에 추가)
+function isToday(dateToCheck) {
+    const today = new Date();
+    return dateToCheck.getFullYear() === today.getFullYear() &&
+           dateToCheck.getMonth() === today.getMonth() &&
+           dateToCheck.getDate() === today.getDate();
+}
+
+// 2. 댓글 모달을 열거나 렌더링하는 함수 내부에서 입력창 제어
+function checkCommentPermission() {
+    const commentInputContainer = document.querySelector('.comment-input-area'); // 댓글 입력창(input + button)을 감싸는 div 클래스명
+    
+    // 만약 이미 안내 문구가 있다면 제거
+    const existingMsg = document.getElementById('not-today-msg');
+    if (existingMsg) existingMsg.remove();
+
+    if (isToday(currentDate)) {
+        // 오늘이면 입력창 표시
+        if (commentInputContainer) commentInputContainer.style.display = 'flex'; 
+    } else {
+        // 오늘이 아니면 입력창 숨기고 안내 메시지 표시
+        if (commentInputContainer) {
+            commentInputContainer.style.display = 'none';
+            
+            const msgDiv = document.createElement('div');
+            msgDiv.id = 'not-today-msg';
+            msgDiv.style.cssText = 'text-align: center; padding: 15px; color: #888; font-size: 13px;';
+            msgDiv.innerText = '당일 추천 곡에만 댓글을 작성할 수 있습니다.';
+            
+            commentInputContainer.parentNode.insertBefore(msgDiv, commentInputContainer.nextSibling);
+        }
+    }
+}
+
+// 특정 곡의 댓글들을 가져와서 썸네일 위에서 롤링(돌아가며 보여줌)하는 함수
+// 특정 곡의 댓글들을 가져와서 썸네일 위에서 롤링(이름 볼드체 + 배경 화이트)하는 함수
+async function startRollingComments(songId) {
+    try {
+        // 해당 곡의 댓글 목록 가져오기
+        const res = await fetch(`../php/api.php?action=get_comments&song_id=${songId}`);
+        const data = await res.json();
+
+        // 댓글이 없거나 실패하면 종료
+        if (!data.success || !data.comments || data.comments.length === 0) return;
+
+        const rollingBox = document.getElementById(`rolling-comment-${songId}`);
+        if (!rollingBox) return;
+
+        const comments = data.comments;
+        let currentIndex = 0;
+
+        // 💡 [추가] 이름(Bold) + 댓글 내용을 안전하게 가공하여 넣어주는 헬퍼 함수
+        const displayComment = (comment) => {
+            const safeUser = escapeHtml(comment.username || '익명');
+            const safeContent = escapeHtml(comment.content || '');
+            // 왼쪽에 이름을 볼드체(strong)로 배치하고 약간의 여백(margin-right)을 줍니다.
+            rollingBox.innerHTML = `<strong style="font-weight: 700; margin-right: 5px;">${safeUser}</strong>${safeContent}`;
+        };
+
+        // 첫 번째 댓글 즉시 표시
+        displayComment(comments[currentIndex]);
+        rollingBox.style.opacity = '1';
+
+        // 댓글이 2개 이상일 경우 3.5초마다 변경
+        if (comments.length > 1) {
+            setInterval(() => {
+                // 1. 서서히 사라짐
+                rollingBox.style.opacity = '0'; 
+                
+                setTimeout(() => {
+                    // 2. 텍스트 변경
+                    currentIndex = (currentIndex + 1) % comments.length;
+                    displayComment(comments[currentIndex]);
+                    
+                    // 3. 서서히 나타남
+                    rollingBox.style.opacity = '1'; 
+                }, 500); // 0.5초(사라지는 시간) 대기 후 교체
+                
+            }, 3500); // 3.5초 주기로 실행
+        }
+    } catch (err) {
+        console.error('롤링 댓글 로드 실패:', err);
+    }
 }
