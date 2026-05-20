@@ -111,6 +111,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.youtube_url) { 
                     document.getElementById('recommendMsg').innerText = data.daily_comment || "작성된 한 줄 소감이 없습니다.";
                     document.getElementById('youtubeUrl').value = data.youtube_url;
+
+                    updatePencilVisibility(true, true);
                     
                     if (document.getElementById('videoLink')) {
                         document.getElementById('videoLink').href = data.youtube_url;
