@@ -142,7 +142,7 @@ function renderFeedSongs(songs) {
         const infoName = song.username;
 
         if (song.song_id) {
-            // ✅ 음악을 등록한 사람: 정보칸 이름은 '(나)' 없이 나옴
+            // ✅ 음악을 등록한 사람: 정보칸 이름은 '(나)' 없이 나옴 + 댓글 버튼 포함
             card.innerHTML = `
                 <div class="song-scroll-wrapper">
                     <div class="thumb-area" style="cursor: pointer;">
@@ -156,6 +156,9 @@ function renderFeedSongs(songs) {
                         <div style="font-size: 11px; color: rgba(0,0,0,0.4); margin-bottom: 8px; font-weight: 500;">@${song.login_id || '아이디 없음'}</div>
                         <div class="msg">${song.daily_comment || '등록된 코멘트가 없습니다.'}</div>
                         <div class="post-time">${song.log_date || ''} ${song.log_time || ''}</div>
+                        <button class="comment-btn" data-song-id="${song.song_id}" aria-label="댓글">
+                            <img src="../img/comment.png" alt="댓글">
+                        </button>
                     </div>
                 </div>
             `;
@@ -163,6 +166,15 @@ function renderFeedSongs(songs) {
             const thumbArea = card.querySelector('.thumb-area');
             if (thumbArea && song.youtube_url) {
                 thumbArea.onclick = () => window.open(song.youtube_url, '_blank');
+            }
+
+            // ▼▼▼ 댓글 버튼 이벤트 연결 ▼▼▼
+            const commentBtn = card.querySelector('.comment-btn');
+            if (commentBtn) {
+                commentBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    openCommentModal(song.song_id);
+                };
             }
         } else {
             // ✅ 음악을 등록하지 않은 사람 (z-index: 2 추가하여 완전한 흰색으로 표시)
@@ -273,7 +285,6 @@ function restoreToggleStates() {
 }
 
 // --- 5. 사이드바 바텀 시트 그룹 정보 로드 ---
-// --- 5. 사이드바 바텀 시트 그룹 정보 로드 ---
 async function loadMyInfoIntoGroup() {
     const groupListContainer = document.getElementById("real-group-list");
     if (!groupListContainer) return;
@@ -311,7 +322,6 @@ async function loadMyInfoIntoGroup() {
             groupListContainer.appendChild(myItem);
 
             // --- [참여 중인 그룹] 목록 ---
-            // 🔥 [에러 해결!] 여기서 groupRes를 딱 한 번만 선언해야 합니다.
             const groupRes = await fetch('../php/fetch_my_groups.php?t=' + new Date().getTime());
             const groupData = await groupRes.json();
 
@@ -524,4 +534,194 @@ function setupEventListeners() {
     if (toggle) {
         toggle.onclick = () => content.classList.toggle('collapsed');
     }
+}
+
+// ============================================================
+// 댓글 모달 기능
+// ============================================================
+let currentCommentSongId = null;
+
+function openCommentModal(songId) {
+    currentCommentSongId = songId;
+    const overlay = document.getElementById('commentModalOverlay');
+    const input = document.getElementById('commentInput');
+    if (!overlay) return;
+
+    overlay.classList.add('show');
+    if (input) input.value = '';
+    loadComments(songId);
+
+    // 오버레이 바깥 클릭 시 닫기
+    overlay.onclick = (e) => {
+        if (e.target === overlay) closeCommentModal();
+    };
+
+    // X 버튼
+    const closeBtn = document.getElementById('commentModalClose');
+    if (closeBtn) closeBtn.onclick = closeCommentModal;
+
+    // 등록 버튼
+    const submitBtn = document.getElementById('commentSubmitBtn');
+    if (submitBtn) submitBtn.onclick = submitComment;
+
+    // 엔터로 등록
+    if (input) {
+        input.onkeydown = (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                submitComment();
+            }
+        };
+    }
+}
+
+function closeCommentModal() {
+    const overlay = document.getElementById('commentModalOverlay');
+    if (overlay) overlay.classList.remove('show');
+    currentCommentSongId = null;
+}
+
+async function loadComments(songId) {
+    const listArea = document.getElementById('commentListArea');
+    if (!listArea) return;
+    listArea.innerHTML = '<div class="comment-empty">불러오는 중...</div>';
+
+    try {
+        const res = await fetch(`../php/api.php?action=get_comments&song_id=${songId}`);
+        const data = await res.json();
+
+        if (!data.success) {
+            listArea.innerHTML = `<div class="comment-empty">${data.message || '불러올 수 없습니다.'}</div>`;
+            return;
+        }
+
+        if (!data.comments || data.comments.length === 0) {
+            listArea.innerHTML = '<div class="comment-empty">첫 댓글을 남겨보세요</div>';
+            return;
+        }
+
+        listArea.innerHTML = '';
+        data.comments.forEach(c => {
+            const item = document.createElement('div');
+            item.className = 'comment-item';
+
+            const safeContent = escapeHtml(c.content);
+            const safeUser = escapeHtml(c.username || '알 수 없음');
+            const timeStr = formatCommentTime(c.created_at);
+            const deleteBtn = (c.is_mine == 1)
+                ? `<button class="comment-item-delete" data-id="${c.comment_id}">삭제</button>`
+                : '';
+
+            item.innerHTML = `
+                <div class="comment-item-header">
+                    <span class="comment-item-user">${safeUser}</span>
+                    <div style="display:flex; align-items:center;">
+                        <span class="comment-item-time">${timeStr}</span>
+                        ${deleteBtn}
+                    </div>
+                </div>
+                <div class="comment-item-content">${safeContent}</div>
+            `;
+            listArea.appendChild(item);
+        });
+
+        // 삭제 버튼 이벤트 연결
+        listArea.querySelectorAll('.comment-item-delete').forEach(btn => {
+            btn.onclick = () => deleteComment(parseInt(btn.dataset.id));
+        });
+
+        // 스크롤 맨 아래로 (최신 댓글 보이게)
+        listArea.scrollTop = listArea.scrollHeight;
+
+    } catch (err) {
+        console.error('댓글 로드 실패:', err);
+        listArea.innerHTML = '<div class="comment-empty">오류가 발생했습니다.</div>';
+    }
+}
+
+async function submitComment() {
+    if (!currentCommentSongId) return;
+    const input = document.getElementById('commentInput');
+    const submitBtn = document.getElementById('commentSubmitBtn');
+    if (!input) return;
+
+    const content = input.value.trim();
+    if (!content) {
+        input.focus();
+        return;
+    }
+
+    if (submitBtn) submitBtn.disabled = true;
+
+    try {
+        const res = await fetch('../php/api.php?action=add_comment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ song_id: currentCommentSongId, content })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            input.value = '';
+            await loadComments(currentCommentSongId);
+        } else {
+            alert(data.message || '등록 실패');
+        }
+    } catch (err) {
+        console.error('댓글 등록 실패:', err);
+        alert('서버 통신 오류');
+    } finally {
+        if (submitBtn) submitBtn.disabled = false;
+    }
+}
+
+async function deleteComment(commentId) {
+    if (!confirm('댓글을 삭제하시겠습니까?')) return;
+
+    try {
+        const res = await fetch('../php/api.php?action=delete_comment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ comment_id: commentId })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            await loadComments(currentCommentSongId);
+        } else {
+            alert(data.message || '삭제 실패');
+        }
+    } catch (err) {
+        console.error('댓글 삭제 실패:', err);
+        alert('서버 통신 오류');
+    }
+}
+
+// XSS 방지용 HTML 이스케이프
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+// 시간 포맷팅
+function formatCommentTime(timestamp) {
+    if (!timestamp) return '';
+    const d = new Date(timestamp.replace(' ', 'T'));
+    if (isNaN(d.getTime())) return timestamp;
+    const now = new Date();
+    const diffMs = now - d;
+    const diffMin = Math.floor(diffMs / 60000);
+    const diffHr = Math.floor(diffMs / 3600000);
+    const diffDay = Math.floor(diffMs / 86400000);
+
+    if (diffMin < 1) return '방금 전';
+    if (diffMin < 60) return `${diffMin}분 전`;
+    if (diffHr < 24) return `${diffHr}시간 전`;
+    if (diffDay < 7) return `${diffDay}일 전`;
+    return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
 }

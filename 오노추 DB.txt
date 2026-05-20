@@ -297,3 +297,17 @@ CREATE TABLE email_verifications (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_email (email)
 );
+
+USE blabackspace;
+
+CREATE TABLE IF NOT EXISTS song_comments (
+    comment_id   INT AUTO_INCREMENT PRIMARY KEY,
+    song_id      INT NOT NULL,
+    user_id      INT NOT NULL,
+    content      VARCHAR(300) NOT NULL,
+    created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_deleted   TINYINT(1) DEFAULT 0,
+    FOREIGN KEY (song_id) REFERENCES songs(song_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    INDEX idx_song_created (song_id, created_at)
+);

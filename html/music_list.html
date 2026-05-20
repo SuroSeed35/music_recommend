@@ -25,6 +25,24 @@
                 <div id="real-group-list"></div>
             </div>
         </div>
+        <!-- 댓글 모달 -->
+        <div class="comment-modal-overlay" id="commentModalOverlay">
+            <div class="comment-modal-box" id="commentModalBox">
+                <div class="comment-modal-header">
+                    <span class="comment-modal-title">댓글</span>
+                    <button class="comment-modal-close" id="commentModalClose">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="comment-list-area" id="commentListArea">
+                    <!-- 댓글 목록이 JS로 렌더링됨 -->
+                </div>
+                <div class="comment-input-area">
+                    <input type="text" id="commentInput" placeholder="댓글을 입력하세요" maxlength="300">
+                    <button id="commentSubmitBtn">등록</button>
+                </div>
+            </div>
+        </div>
 
         <!-- 사이드바 컨테이너 부분 수정 -->
         <div class="side-bar-container">

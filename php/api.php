@@ -159,6 +159,123 @@ switch ($action) {
         $res = mysqli_query($conn, "SELECT song_id FROM songs WHERE user_id = $my_id AND DATE(created_at) = CURRENT_DATE");
         echo json_encode(["already_done" => mysqli_num_rows($res) > 0]);
         break;
+
+    case 'get_comments':
+        $song_id = (int)($_GET['song_id'] ?? 0);
+        if ($song_id <= 0) { 
+            echo json_encode(["success" => false, "message" => "잘못된 요청"]); 
+            break; 
+        }
+
+        // 곡 주인 확인
+        $owner_res = mysqli_query($conn, "SELECT user_id FROM songs WHERE song_id = $song_id");
+        $owner_row = mysqli_fetch_assoc($owner_res);
+        if (!$owner_row) { 
+            echo json_encode(["success" => false, "message" => "곡을 찾을 수 없음"]); 
+            break; 
+        }
+        $owner_id = (int)$owner_row['user_id'];
+
+        // 권한 체크: 본인 곡이거나, 같은 그룹에 소속된 적이 있어야 함
+        $can_view = ($owner_id === $my_id);
+        if (!$can_view) {
+            $perm_sql = "SELECT 1 FROM group_members gm1 
+                         JOIN group_members gm2 ON gm1.group_id = gm2.group_id
+                         WHERE gm1.user_id = $owner_id AND gm2.user_id = $my_id LIMIT 1";
+            $perm_res = mysqli_query($conn, $perm_sql);
+            $can_view = (mysqli_num_rows($perm_res) > 0);
+        }
+        if (!$can_view) { 
+            echo json_encode(["success" => false, "message" => "권한 없음"]); 
+            break; 
+        }
+
+        // 댓글 목록 조회
+        $sql = "SELECT c.comment_id, c.user_id, c.content, c.created_at, 
+                       u.username, u.login_id,
+                       IF(c.user_id = $my_id, 1, 0) AS is_mine
+                FROM song_comments c
+                JOIN users u ON c.user_id = u.user_id
+                WHERE c.song_id = $song_id AND c.is_deleted = 0
+                ORDER BY c.created_at ASC";
+        $res = mysqli_query($conn, $sql);
+        $comments = mysqli_fetch_all($res, MYSQLI_ASSOC);
+        echo json_encode(["success" => true, "comments" => $comments]);
+        break;
+
+    case 'add_comment':
+        $data = json_decode(file_get_contents('php://input'), true);
+        $song_id = (int)($data['song_id'] ?? 0);
+        $content = trim($data['content'] ?? '');
+
+        // 입력 검증
+        if ($song_id <= 0 || $content === '') { 
+            echo json_encode(["success" => false, "message" => "내용을 입력하세요"]); 
+            break; 
+        }
+        if (mb_strlen($content) > 300) { 
+            echo json_encode(["success" => false, "message" => "300자 이내로 입력하세요"]); 
+            break; 
+        }
+
+        // 곡 주인 확인
+        $owner_res = mysqli_query($conn, "SELECT user_id FROM songs WHERE song_id = $song_id");
+        $owner_row = mysqli_fetch_assoc($owner_res);
+        if (!$owner_row) { 
+            echo json_encode(["success" => false, "message" => "곡을 찾을 수 없음"]); 
+            break; 
+        }
+        $owner_id = (int)$owner_row['user_id'];
+
+        // 권한 체크: 본인 곡이거나, 같은 그룹 멤버
+        $can_write = ($owner_id === $my_id);
+        if (!$can_write) {
+            $perm_sql = "SELECT 1 FROM group_members gm1 
+                         JOIN group_members gm2 ON gm1.group_id = gm2.group_id
+                         WHERE gm1.user_id = $owner_id AND gm2.user_id = $my_id LIMIT 1";
+            $perm_res = mysqli_query($conn, $perm_sql);
+            $can_write = (mysqli_num_rows($perm_res) > 0);
+        }
+        if (!$can_write) { 
+            echo json_encode(["success" => false, "message" => "같은 그룹 멤버만 댓글을 달 수 있습니다"]); 
+            break; 
+        }
+
+        $safe_content = mysqli_real_escape_string($conn, $content);
+        $sql = "INSERT INTO song_comments (song_id, user_id, content) VALUES ($song_id, $my_id, '$safe_content')";
+        if (mysqli_query($conn, $sql)) {
+            echo json_encode(["success" => true, "comment_id" => mysqli_insert_id($conn)]);
+        } else {
+            echo json_encode(["success" => false, "message" => "저장 실패"]);
+        }
+        break;
+
+    case 'delete_comment':
+        $data = json_decode(file_get_contents('php://input'), true);
+        $comment_id = (int)($data['comment_id'] ?? 0);
+        if ($comment_id <= 0) { 
+            echo json_encode(["success" => false, "message" => "잘못된 요청"]); 
+            break; 
+        }
+
+        // 본인 댓글인지 확인
+        $check_res = mysqli_query($conn, "SELECT user_id FROM song_comments WHERE comment_id = $comment_id AND is_deleted = 0");
+        $check_row = mysqli_fetch_assoc($check_res);
+        if (!$check_row) { 
+            echo json_encode(["success" => false, "message" => "댓글을 찾을 수 없음"]); 
+            break; 
+        }
+        if ((int)$check_row['user_id'] !== $my_id) { 
+            echo json_encode(["success" => false, "message" => "본인 댓글만 삭제 가능"]); 
+            break; 
+        }
+
+        if (mysqli_query($conn, "UPDATE song_comments SET is_deleted = 1 WHERE comment_id = $comment_id")) {
+            echo json_encode(["success" => true]);
+        } else {
+            echo json_encode(["success" => false, "message" => "삭제 실패"]);
+        }
+        break;
 }
 
 mysqli_close($conn);

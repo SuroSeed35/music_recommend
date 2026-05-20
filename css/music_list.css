@@ -378,3 +378,185 @@ html {
     flex-direction: column;
     overflow: hidden;
 }
+
+/* ============================================================
+   댓글 버튼 & 댓글 모달 (덮어쓰기 안전 버전)
+============================================================ */
+
+/* .info-area를 댓글 버튼의 기준점으로 사용 */
+.info-area {
+    position: relative;
+}
+
+/* 댓글 버튼: .info-area 우측 하단 */
+.comment-btn {
+    position: absolute !important;
+    bottom: 16px;
+    right: 16px;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.15s, background 0.15s;
+    z-index: 5;
+    padding: 0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+.comment-btn:active {
+    transform: scale(0.92);
+    background: #f5f5f5;
+}
+.comment-btn img {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+    opacity: 0.85;
+    display: block;
+}
+
+/* --- 댓글 모달 (화면 정중앙 팝업) --- */
+.comment-modal-overlay {
+    display: none !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+    z-index: 3000 !important;
+    justify-content: center !important;
+    align-items: center !important;
+}
+.comment-modal-overlay.show {
+    display: flex !important;
+}
+.comment-modal-box {
+    width: 88%;
+    max-width: 360px;
+    max-height: 70vh;
+    background: #fff;
+    border-radius: 18px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+    animation: commentModalIn 0.25s ease-out;
+}
+@keyframes commentModalIn {
+    from { opacity: 0; transform: translateY(20px) scale(0.95); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.comment-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #f0f0f0;
+}
+.comment-modal-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: #111;
+}
+.comment-modal-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    color: #888;
+    padding: 4px 8px;
+    line-height: 1;
+}
+.comment-list-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 20px;
+    min-height: 120px;
+}
+.comment-list-area::-webkit-scrollbar { width: 4px; }
+.comment-list-area::-webkit-scrollbar-thumb { background: #ddd; border-radius: 2px; }
+
+.comment-item {
+    padding: 10px 0;
+    border-bottom: 1px solid #f5f5f5;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.comment-item:last-child { border-bottom: none; }
+.comment-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.comment-item-user {
+    font-size: 13px;
+    font-weight: 700;
+    color: #333;
+}
+.comment-item-time {
+    font-size: 11px;
+    color: #aaa;
+}
+.comment-item-content {
+    font-size: 14px;
+    color: #222;
+    line-height: 1.4;
+    word-break: break-all;
+}
+.comment-item-delete {
+    background: none;
+    border: none;
+    color: #c00;
+    font-size: 11px;
+    cursor: pointer;
+    padding: 2px 6px;
+    margin-left: 6px;
+}
+.comment-empty {
+    text-align: center;
+    color: #aaa;
+    font-size: 13px;
+    padding: 40px 0;
+}
+
+.comment-input-area {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid #f0f0f0;
+    background: #fafafa;
+}
+.comment-input-area input {
+    flex: 1;
+    border: 1px solid #e0e0e0;
+    border-radius: 20px;
+    padding: 10px 14px;
+    font-size: 14px;
+    outline: none;
+    background: #fff;
+    min-width: 0;
+}
+.comment-input-area input:focus {
+    border-color: #999;
+}
+.comment-input-area button {
+    background: #000;
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    padding: 0 18px;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.comment-input-area button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
