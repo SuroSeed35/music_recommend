@@ -675,26 +675,26 @@ async function submitComment() {
     }
 }
 
-async function deleteComment(commentId) {
-    if (!confirm('댓글을 삭제하시겠습니까?')) return;
+function deleteComment(commentId) {
+    showCustomModal('댓글을 삭제하시겠습니까?', async () => {
+        try {
+            const res = await fetch('../php/api.php?action=delete_comment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ comment_id: commentId })
+            });
+            const data = await res.json();
 
-    try {
-        const res = await fetch('../php/api.php?action=delete_comment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ comment_id: commentId })
-        });
-        const data = await res.json();
-
-        if (data.success) {
-            await loadComments(currentCommentSongId);
-        } else {
-            alert(data.message || '삭제 실패');
+            if (data.success) {
+                await loadComments(currentCommentSongId);
+            } else {
+                alert(data.message || '삭제 실패');
+            }
+        } catch (err) {
+            console.error('댓글 삭제 실패:', err);
+            alert('서버 통신 오류');
         }
-    } catch (err) {
-        console.error('댓글 삭제 실패:', err);
-        alert('서버 통신 오류');
-    }
+    });
 }
 
 // XSS 방지용 HTML 이스케이프
