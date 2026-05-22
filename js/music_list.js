@@ -1,44 +1,6 @@
 let currentDate = new Date();
 currentDate.setHours(0, 0, 0, 0);
 
-// CSS 파일을 수정하지 않기 위해 JS에서 직접 울렁거리는 그라데이션 애니메이션을 주입합니다.
-const style = document.createElement('style');
-style.innerHTML = `
-    @keyframes waveGradient {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-    }
-    .wavy-bw-gradient {
-        background: linear-gradient(-45deg, #1a1a1a, #868e96, #ced4da, #495057);
-        background-size: 400% 400%;
-        animation: waveGradient 8s ease infinite;
-    }
-    
-    /* 롤링 댓글 스타일 수정 */
-    .thumb-area { position: relative; }
-    .rolling-comment {
-        position: absolute;
-        bottom: 14px;
-        left: 14px;
-        background: rgba(255, 255, 255, 0.9);
-        color: #222222;
-        padding: 5px 10px;
-        border-radius: 12px;
-        font-size: 11px;
-        max-width: 85%;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        opacity: 0; 
-        transition: opacity 0.5s ease-in-out;
-        pointer-events: none;
-        z-index: 10;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    }
-`;
-document.head.appendChild(style);
-
 document.addEventListener("DOMContentLoaded", () => {
     updateDateDisplay();
     setupDateNavigation();
@@ -107,16 +69,16 @@ async function loadData() {
         // 1. 피드(노래) 목록 출력
         renderFeedSongs(data.feed_songs);
 
-        // 🔥 [추가] 전체 재생 큐 동기화
+        // 2. 전체 재생 큐 동기화
         PlayAll.syncQueue(data.feed_songs);
 
-        // 2. 친구 요청 목록 출력
+        // 3. 친구 요청 목록 출력
         renderRequests(data.requests);
 
-        // 3. 그룹 목록 출력 
+        // 4. 그룹 목록 출력 
         renderGroups(data.groups);
 
-        // 4. 친구 목록 출력
+        // 5. 친구 목록 출력
         renderFriends(data.friends);
 
     } catch (err) {
@@ -158,7 +120,6 @@ function renderFeedSongs(songs) {
         const card = document.createElement('div');
         card.className = 'song-card'; 
 
-        const thumbName = song.is_me == 1 ? `(나) ${song.username}` : song.username;
         const infoName = song.username;
 
         if (song.song_id) {
@@ -199,9 +160,6 @@ function renderFeedSongs(songs) {
             card.innerHTML = `
                 <div class="song-scroll-wrapper">
                     <div class="thumb-area wavy-bw-gradient">
-                        <div style="position: absolute; bottom: 20px; left: 20px; color: #ffffff; text-shadow: 0 1px 6px rgba(0,0,0,0.8); font-size: 17px; font-weight: 800; z-index: 2;">
-                            
-                        </div>
                     </div>
                     <div class="info-area" style="background: #f8f9fa; display: flex; justify-content: center; align-items: center; text-align: center;">
                         <div class="msg" style="color: #adb5bd; font-weight: 600; margin: 0; font-size: 15px;">${emptyMsg}</div>
@@ -293,7 +251,6 @@ function restoreToggleStates() {
     });
 }
 
-// --- 5. 사이드바 바텀 시트 그룹 정보 로드 ---
 async function loadMyInfoIntoGroup() {
     const groupListContainer = document.getElementById("real-group-list");
     if (!groupListContainer) return;
@@ -429,13 +386,12 @@ function changeMainGroup(groupId, groupName) {
     });
 }
 
-// --- 7. 바텀 시트 제스처 ---
 function setupSwipeGesture() {
     const sheet = document.getElementById('bottomSheet');
     if (!sheet) return;
 
     let currentState = 'closed';
-
+    let startX = 0; 
     let startY = 0;
     let startTarget = null;
     let isInsideScroll = false;
@@ -445,11 +401,8 @@ function setupSwipeGesture() {
     const applyState = (next) => {
         if (next === currentState) return;
         sheet.classList.remove('state-closed', 'state-half', 'state-full', 'show');
-        if (next === 'half') {
-            sheet.classList.add('state-half');
-        } else if (next === 'full') {
-            sheet.classList.add('state-full');
-        }
+        if (next === 'half') sheet.classList.add('state-half');
+        else if (next === 'full') sheet.classList.add('state-full');
         currentState = next;
     };
 
@@ -464,15 +417,26 @@ function setupSwipeGesture() {
     };
 
     document.addEventListener('touchstart', (e) => {
+        startX = e.touches[0].clientX;
         startY = e.touches[0].clientY;
         startTarget = e.target;
         isInsideScroll = !!(groupList && groupList.contains(startTarget));
     }, { passive: true });
 
     document.addEventListener('touchend', (e) => {
+        if (!startTarget) return;
+
+        // 🔥 [철벽 방어] 미니 플레이어(재생바 포함) 영역 터치 시 바텀시트 동작 원천 차단
+        if (startTarget.closest('.mini-player')) return;
+
+        const endX = e.changedTouches[0].clientX;
         const endY = e.changedTouches[0].clientY;
+        const deltaX = startX - endX;
         const deltaY = startY - endY;
         const THRESHOLD = 50;
+
+        // 🔥 [철벽 방어] 좌우(재생바 조절) 드래그가 위아래보다 크면 바텀시트 이동 금지
+        if (Math.abs(deltaX) > Math.abs(deltaY)) return;
 
         if (Math.abs(deltaY) < THRESHOLD) return;
 
@@ -493,26 +457,14 @@ function setupSwipeGesture() {
 
         transition(direction);
     }, { passive: true });
-
-    const handle = document.getElementById('dragHandle');
-    if (handle) {
-        handle.addEventListener('click', () => {
-            if (currentState === 'closed') applyState('half');
-            else if (currentState === 'half') applyState('full');
-            else if (currentState === 'full') applyState('closed');
-        });
-    }
 }
 
-// --- 8. 사이드바 이벤트 ---
 function setupEventListeners() {
     const toggle = document.getElementById('sideBarToggle');
     const content = document.getElementById('sideBarContent');
     if (toggle) {
         toggle.onclick = () => content.classList.toggle('collapsed');
     }
-
-    // 🔥 [추가] 전체 재생 기능 초기화
     PlayAll.init();
 }
 
@@ -802,9 +754,8 @@ async function startRollingComments(songId) {
 }
 
 // ============================================================
-// 🔥 [추가] 전체 재생 & 미니 플레이어 (앱 내 IFrame 재생)
+// 🔥 플로팅/확장형 미니 플레이어 & 전체 재생 모듈
 // ============================================================
-
 const PlayAll = (() => {
     let player = null;
     let apiReady = false;
@@ -813,9 +764,14 @@ const PlayAll = (() => {
     let currentIndex = -1;
     let isPlaying = false;
     let initialized = false;
+    let isExpanded = false;
 
-    let $playAllBtn, $miniPlayer, $thumb, $title, $sub;
-    let $prev, $playPause, $playPauseIcon, $next, $close;
+    let $playAllBtn, $miniPlayer, $mpHeader, $thumb, $title, $sub;
+    let $prev, $playPause, $playPauseIcon, $next, $close, $queueList;
+
+    let isDragging = false;
+    let dragStartX = 0, dragStartY = 0;
+    let initialLeft = 0, initialTop = 0;
 
     function extractYouTubeID(url) {
         if (!url) return null;
@@ -828,22 +784,10 @@ const PlayAll = (() => {
         apiReady = true;
         try {
             player = new YT.Player('yt-player', {
-                height: '1',
-                width: '1',
-                playerVars: {
-                    autoplay: 0,
-                    controls: 0,
-                    disablekb: 1,
-                    fs: 0,
-                    modestbranding: 1,
-                    playsinline: 1,
-                    rel: 0
-                },
-                events: {
-                    onReady: onPlayerReady,
-                    onStateChange: onPlayerStateChange,
-                    onError: onPlayerError
-                }
+                height: '100%',
+                width: '100%',
+                playerVars: { autoplay: 0, controls: 1, disablekb: 1, fs: 0, modestbranding: 1, playsinline: 1, rel: 0 },
+                events: { onReady: onPlayerReady, onStateChange: onPlayerStateChange, onError: onPlayerError }
             });
         } catch (e) {
             console.error('[PlayAll] YT.Player 생성 실패:', e);
@@ -858,17 +802,12 @@ const PlayAll = (() => {
     }
 
     function onPlayerStateChange(e) {
-        if (e.data === YT.PlayerState.PLAYING) {
-            setPlayingUI(true);
-        } else if (e.data === YT.PlayerState.PAUSED) {
-            setPlayingUI(false);
-        } else if (e.data === YT.PlayerState.ENDED) {
-            playNext();
-        }
+        if (e.data === YT.PlayerState.PLAYING) setPlayingUI(true);
+        else if (e.data === YT.PlayerState.PAUSED) setPlayingUI(false);
+        else if (e.data === YT.PlayerState.ENDED) playNext();
     }
 
     function onPlayerError(e) {
-        console.warn('[PlayAll] YT 에러:', e && e.data);
         showToastSafe('이 영상은 재생할 수 없습니다. 다음 곡으로 넘어갑니다.');
         setTimeout(() => playNext(), 400);
     }
@@ -888,27 +827,17 @@ const PlayAll = (() => {
 
         const wasPlayingThisQueue = isPlaying && queue.length > 0;
         queue = newQueue;
-
-        if ($playAllBtn) {
-            $playAllBtn.disabled = (queue.length === 0);
-        }
+        if ($playAllBtn) $playAllBtn.disabled = (queue.length === 0);
 
         if (wasPlayingThisQueue) {
-            if (queue.length === 0) {
-                stopAll();
-            } else {
-                playAt(0);
-            }
+            if (queue.length === 0) stopAll();
+            else playAt(0);
         }
     }
 
     function startPlayAll() {
-        if (queue.length === 0) {
-            showToastSafe('재생할 곡이 없습니다');
-            return;
-        }
+        if (queue.length === 0) { showToastSafe('재생할 곡이 없습니다'); return; }
         showMiniPlayer();
-
         if (!apiReady || !player || typeof player.loadVideoById !== 'function') {
             pendingStart = true;
             currentIndex = 0;
@@ -923,55 +852,25 @@ const PlayAll = (() => {
         if (index < 0 || index >= queue.length) return;
         currentIndex = index;
         renderMiniPlayer();
+        renderQueueList();
 
         if (!player || typeof player.loadVideoById !== 'function') {
             pendingStart = true;
             return;
         }
         try {
-            // 🔥 cueVideoById로 큐에만 올리고
             player.cueVideoById(queue[currentIndex].videoId);
-            // 🔥 약간의 딜레이 후 명시적으로 재생 트리거
-            setTimeout(() => {
-                try {
-                    player.playVideo();
-                    player.setVolume(100);   // 🔥 볼륨 명시
-                    player.unMute();          // 🔥 음소거 해제 명시
-                } catch (e) {}
-            }, 300);
-        } catch (e) {
-            console.error('[PlayAll] cueVideoById 실패:', e);
-        }
+            setTimeout(() => { try { player.playVideo(); player.setVolume(100); player.unMute(); } catch (e) {} }, 300);
+        } catch (e) {}
     }
 
-    function playPrev() {
-        if (currentIndex > 0) {
-            playAt(currentIndex - 1);
-        } else {
-            try { player && player.seekTo(0, true); } catch (e) {}
-        }
-    }
-
-    function playNext() {
-        if (currentIndex < queue.length - 1) {
-            playAt(currentIndex + 1);
-        } else {
-            stopAll();
-        }
-    }
-
+    function playPrev() { currentIndex > 0 ? playAt(currentIndex - 1) : (player && player.seekTo(0, true)); }
+    function playNext() { currentIndex < queue.length - 1 ? playAt(currentIndex + 1) : stopAll(); }
+    
     function togglePlayPause() {
         if (!player) return;
-        try {
-            const state = player.getPlayerState && player.getPlayerState();
-            if (state === YT.PlayerState.PLAYING) {
-                player.pauseVideo();
-            } else {
-                player.playVideo();
-            }
-        } catch (e) {
-            console.error('[PlayAll] toggle 실패:', e);
-        }
+        const state = player.getPlayerState && player.getPlayerState();
+        state === YT.PlayerState.PLAYING ? player.pauseVideo() : player.playVideo();
     }
 
     function stopAll() {
@@ -984,51 +883,161 @@ const PlayAll = (() => {
     function renderMiniPlayer() {
         if (currentIndex < 0 || !queue[currentIndex]) return;
         const item = queue[currentIndex];
-
         if ($title) $title.textContent = item.title;
-        if ($sub) {
-            const who = item.username ? `@${item.loginId || item.username}` : '';
-            $sub.textContent = `${who} · ${currentIndex + 1} / ${queue.length}`;
-        }
-        if ($thumb) {
-            $thumb.src = item.thumb || '';
-            $thumb.alt = item.title;
-        }
-
+        if ($sub) $sub.textContent = `@${item.loginId || item.username} · ${currentIndex + 1} / ${queue.length}`;
+        if ($thumb) { $thumb.src = item.thumb || ''; $thumb.alt = item.title; }
         if ($prev) $prev.disabled = (currentIndex <= 0);
         if ($next) $next.disabled = (currentIndex >= queue.length - 1);
+    }
+
+    // --- [수정된 렌더링 로직] 상태 표시가 확실하게 반영됩니다 ---
+    function renderQueueList() {
+        if (!$queueList || !isExpanded) return;
+        
+        $queueList.innerHTML = '';
+        
+        queue.forEach((item, index) => {
+            const isCurrent = (index === currentIndex);
+            const isPlayed = (index < currentIndex);
+            
+            const qItem = document.createElement('div');
+            qItem.className = 'q-item';
+            
+            // 상태별 클래스 추가
+            if (isPlayed) qItem.classList.add('played');
+            if (isCurrent) qItem.classList.add('current');
+            
+            // 재생 완료 라벨 (과거 곡인 경우)
+            const badge = isPlayed ? `<span class="q-label-played">재생 완료</span>` : '';
+            
+            qItem.innerHTML = `
+                <div class="q-thumb"><img src="${item.thumb}" alt=""></div>
+                <div class="q-info">
+                    <div class="q-title">${badge}${item.title}</div>
+                    <div class="q-user">@${item.loginId || item.username}</div>
+                </div>
+            `;
+            
+            // 클릭 시 해당 곡으로 점프
+            qItem.onclick = () => playAt(index);
+            $queueList.appendChild(qItem);
+        });
+
+        // 현재 곡이 리스트에 표시되도록 자동 스크롤
+        const currentEl = $queueList.querySelector('.current');
+        if (currentEl) {
+            currentEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }
+
+    // 🔥 핵심: 애니메이션이 꼬이지 않게 인라인 스타일을 완벽하게 초기화하는 토글 함수
+    function toggleExpand() {
+        isExpanded = !isExpanded;
+        if (isExpanded) {
+            // 드래그 중 생겼던 인라인 위치 값 제거 (CSS 트랜지션을 살리기 위함)
+            $miniPlayer.style.left = '';
+            $miniPlayer.style.top = '';
+            $miniPlayer.style.bottom = '';
+            $miniPlayer.style.transform = '';
+
+            // 스타일 초기화가 DOM에 반영된 직후 애니메이션 클래스를 붙여 튕김 방지
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    $miniPlayer.classList.add('expanded');
+                });
+            });
+            renderQueueList();
+        } else {
+            $miniPlayer.classList.remove('expanded');
+        }
+    }
+
+    function onDragStart(e) {
+        if (e.target.closest('.mp-btn')) return;
+
+        if (isExpanded) {
+            toggleExpand();
+            return;
+        }
+
+        const touch = e.touches ? e.touches[0] : e;
+        dragStartX = touch.clientX;
+        dragStartY = touch.clientY;
+        isDragging = false;
+
+        const rect = $miniPlayer.getBoundingClientRect();
+        if ($miniPlayer.style.transform !== 'none') {
+            $miniPlayer.style.transform = 'none';
+            $miniPlayer.style.left = rect.left + 'px';
+            $miniPlayer.style.top = rect.top + 'px';
+            $miniPlayer.style.bottom = 'auto';
+            $miniPlayer.style.right = 'auto';
+        }
+        initialLeft = parseFloat($miniPlayer.style.left) || rect.left;
+        initialTop = parseFloat($miniPlayer.style.top) || rect.top;
+
+        const moveEvt = e.type === 'touchstart' ? 'touchmove' : 'mousemove';
+        const upEvt = e.type === 'touchstart' ? 'touchend' : 'mouseup';
+        document.addEventListener(moveEvt, onDragMove, {passive: false});
+        document.addEventListener(upEvt, onDragEnd);
+    }
+
+    function onDragMove(e) {
+        const touch = e.touches ? e.touches[0] : e;
+        const dx = touch.clientX - dragStartX;
+        const dy = touch.clientY - dragStartY;
+
+        if (!isDragging && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) isDragging = true;
+
+        if (isDragging) {
+            e.preventDefault(); 
+            $miniPlayer.style.left = `${initialLeft + dx}px`;
+            $miniPlayer.style.top = `${initialTop + dy}px`;
+        }
+    }
+
+    function onDragEnd(e) {
+        document.removeEventListener('touchmove', onDragMove);
+        document.removeEventListener('mousemove', onDragMove);
+        document.removeEventListener('touchend', onDragEnd);
+        document.removeEventListener('mouseup', onDragEnd);
+
+        if (!isDragging) {
+            toggleExpand();
+        }
+        isDragging = false;
     }
 
     function setPlayingUI(playing) {
         isPlaying = playing;
         if (!$playPauseIcon) return;
-        $playPauseIcon.classList.remove('fa-play', 'fa-pause');
-        $playPauseIcon.classList.add(playing ? 'fa-pause' : 'fa-play');
+        $playPauseIcon.className = playing ? 'fas fa-pause' : 'fas fa-play';
     }
 
     function showMiniPlayer() {
         if ($miniPlayer) {
             $miniPlayer.classList.add('show');
             $miniPlayer.setAttribute('aria-hidden', 'false');
-            $miniPlayer.removeAttribute('inert'); // 상호작용 허용
+            $miniPlayer.removeAttribute('inert');
         }
     }
 
     function hideMiniPlayer() {
         if ($miniPlayer) {
-            if (document.activeElement && $miniPlayer.contains(document.activeElement)) {
-                document.activeElement.blur();
-            }
-            $miniPlayer.classList.remove('show');
+            isExpanded = false;
+            $miniPlayer.classList.remove('expanded', 'show');
             $miniPlayer.setAttribute('aria-hidden', 'true');
-            $miniPlayer.setAttribute('inert', ''); // 포커스 및 상호작용 완전 차단
+            $miniPlayer.setAttribute('inert', '');
+            
+            $miniPlayer.style.left = '50%';
+            $miniPlayer.style.top = 'auto';
+            $miniPlayer.style.bottom = '16px';
+            $miniPlayer.style.transform = 'translate(-50%, 0)';
         }
     }
 
     function showToastSafe(msg) {
-        if (typeof showToast === 'function') {
-            try { showToast(msg); return; } catch (e) {}
-        }
+        if (typeof showToast === 'function') { try { showToast(msg); return; } catch (e) {} }
         console.log('[PlayAll]', msg);
     }
 
@@ -1038,9 +1047,13 @@ const PlayAll = (() => {
 
         $playAllBtn = document.getElementById('play-all-btn');
         $miniPlayer = document.getElementById('miniPlayer');
+        $mpHeader = document.getElementById('mpHeader');
+        $queueList = document.getElementById('mpQueueList');
+        
         $thumb = document.getElementById('miniPlayerThumb');
         $title = document.getElementById('miniPlayerTitle');
         $sub = document.getElementById('miniPlayerSub');
+        
         $prev = document.getElementById('mpPrevBtn');
         $playPause = document.getElementById('mpPlayPauseBtn');
         $playPauseIcon = document.getElementById('mpPlayPauseIcon');
@@ -1053,7 +1066,10 @@ const PlayAll = (() => {
         if ($playPause) $playPause.addEventListener('click', togglePlayPause);
         if ($close) $close.addEventListener('click', stopAll);
 
-        if ($playAllBtn) $playAllBtn.disabled = (queue.length === 0);
+        if ($mpHeader) {
+            $mpHeader.addEventListener('mousedown', onDragStart);
+            $mpHeader.addEventListener('touchstart', onDragStart, {passive: true});
+        }
     }
 
     return { init, syncQueue };
