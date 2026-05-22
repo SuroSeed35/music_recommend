@@ -1,30 +1,29 @@
 <?php
 /**
- * 이메일 인증 코드 발송
+ * 이메일 인증 코드 발송 (Resend API 버전)
  * 위치: php/send_verification.php
  *
  * 입력 (POST): email
- * 출력 (JSON): { success, message, cooldown_seconds? }
+ * 출력 (JSON): { success, message, cooldown_seconds?, expire_minutes? }
  */
 
 header('Content-Type: application/json; charset=utf-8');
 
-// --- 1. CORS(교차 출처 통신) 허용 설정 추가 ---
+// --- CORS 설정 ---
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
 
-// --- 2. 브라우저의 찔러보기(OPTIONS) 요청이면 정상 처리 후 바로 종료 ---
+// --- OPTIONS 프리플라이트 ---
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
 }
 
-// --- 3. POST가 아닐 때 어떤 방식으로 들어왔는지 화면에 출력하게 수정 ---
+// --- POST가 아닐 때 ---
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    // 에러 메시지에 현재 요청 방식을 함께 출력하도록 변경
     echo json_encode([
-        'success' => false, 
+        'success' => false,
         'message' => '잘못된 요청 방식입니다. (현재 방식: ' . $_SERVER['REQUEST_METHOD'] . ')'
     ]);
     exit;
@@ -34,24 +33,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 require_once __DIR__ . '/db_config.php';
 $mailCfg = require __DIR__ . '/mail_config.php';
 
-// PHPMailer 수동 로드 (Composer 미사용)
-require_once __DIR__ . '/libs/PHPMailer/Exception.php';
-require_once __DIR__ . '/libs/PHPMailer/PHPMailer.php';
-require_once __DIR__ . '/libs/PHPMailer/SMTP.php';
-
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\SMTP;
-use PHPMailer\PHPMailer\Exception;
-
 // mysqli 에러 모드 (PHP 8.1+ 호환)
 mysqli_report(MYSQLI_REPORT_OFF);
 
 // ==================== 1. 입력 검증 ====================
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    echo json_encode(['success' => false, 'message' => '잘못된 요청 방식입니다.']);
-    exit;
-}
-
 $email = trim($_POST['email'] ?? '');
 
 if ($email === '') {
@@ -121,7 +106,6 @@ $codeHash = hash('sha256', $code);
 $expiresAt = date('Y-m-d H:i:s', time() + $expireMin * 60);
 
 // ==================== 5. DB 저장 ====================
-// 같은 이메일의 미인증 기존 레코드는 정리 (지저분한 누적 방지)
 $stmt = mysqli_prepare($conn, "DELETE FROM email_verifications WHERE email = ? AND is_verified = 0");
 mysqli_stmt_bind_param($stmt, 's', $email);
 mysqli_stmt_execute($stmt);
@@ -142,50 +126,66 @@ if (!$insertOk) {
     exit;
 }
 
-// ==================== 6. 메일 발송 ====================
-$mail = new PHPMailer(true);
+// ==================== 6. Resend API로 메일 발송 ====================
+$apiKey   = $mailCfg['api_key'];
+$apiUrl   = $mailCfg['api_url'];
+$fromEmail= $mailCfg['from_email'];
+$fromName = $mailCfg['from_name'];
 
-try {
-    // SMTP 설정
-    $mail->isSMTP();
-    $mail->Host       = $mailCfg['host'];
-    $mail->SMTPAuth   = true;
-    $mail->Username   = $mailCfg['username'];
-    $mail->Password   = str_replace(' ', '', $mailCfg['app_password']); // 공백 제거
-    $mail->SMTPSecure = $mailCfg['encryption'] === 'ssl'
-        ? PHPMailer::ENCRYPTION_SMTPS
-        : PHPMailer::ENCRYPTION_STARTTLS;
-    $mail->Port       = (int) $mailCfg['port'];
-    $mail->CharSet    = 'UTF-8';
+$payload = [
+    'from'    => "{$fromName} <{$fromEmail}>",
+    'to'      => [$email],
+    'subject' => '[쉐어뮤직] 이메일 인증 코드',
+    'html'    => buildMailHtml($code, $expireMin),
+    'text'    => "쉐어뮤직 이메일 인증 코드: {$code}\n유효시간: {$expireMin}분\n\n본인이 요청하지 않았다면 이 메일을 무시해주세요."
+];
 
-    if (!empty($mailCfg['debug_mode'])) {
-        $mail->SMTPDebug = SMTP::DEBUG_SERVER;
-    }
+$ch = curl_init($apiUrl);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'Authorization: Bearer ' . $apiKey,
+    'Content-Type: application/json'
+]);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload, JSON_UNESCAPED_UNICODE));
+curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);  // 닷홈 환경 호환
+curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
 
-    // 발신/수신
-    $mail->setFrom($mailCfg['from_email'], $mailCfg['from_name']);
-    $mail->addAddress($email);
+$response  = curl_exec($ch);
+$httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+$curlError = curl_error($ch);
+curl_close($ch);
 
-    // 메일 본문
-    $mail->isHTML(true);
-    $mail->Subject = '[오노추] 이메일 인증 코드';
-    $mail->Body = buildMailHtml($code, $expireMin);
-    $mail->AltBody = "오노추 이메일 인증 코드: {$code}\n유효시간: {$expireMin}분";
+// 디버그 로그
+if (!empty($mailCfg['debug_mode'])) {
+    error_log("[Resend] HTTP {$httpCode} | Response: {$response} | cURL: {$curlError}");
+}
 
-    $mail->send();
-} catch (Exception $e) {
-    // 발송 실패 시 방금 저장한 레코드 삭제 (혼동 방지)
+// 발송 실패 처리
+$isSuccess = ($httpCode === 200 && empty($curlError));
+$resData   = json_decode($response, true);
+
+if (!$isSuccess || !isset($resData['id'])) {
+    // 방금 저장한 인증 레코드 삭제 (혼동 방지)
     $stmt = mysqli_prepare($conn, "DELETE FROM email_verifications WHERE email = ? AND is_verified = 0");
     mysqli_stmt_bind_param($stmt, 's', $email);
     mysqli_stmt_execute($stmt);
     mysqli_stmt_close($stmt);
     mysqli_close($conn);
 
+    $errMsg = '메일 발송에 실패했습니다.';
+    if (isset($resData['message'])) {
+        $errMsg .= ' (' . $resData['message'] . ')';
+    } elseif (!empty($curlError)) {
+        $errMsg .= ' (네트워크 오류: ' . $curlError . ')';
+    }
+
     echo json_encode([
-        'success' => false,
-        'message' => '메일 발송에 실패했습니다. 잠시 후 다시 시도해주세요.',
-        // 개발 중일 때만 상세 에러 노출 (배포 후엔 제거 권장)
-        'debug'   => $mail->ErrorInfo
+        'success'    => false,
+        'message'    => $errMsg,
+        'debug_http' => $httpCode,
+        'debug_body' => !empty($mailCfg['debug_mode']) ? $response : null
     ]);
     exit;
 }
@@ -194,9 +194,9 @@ mysqli_close($conn);
 
 // ==================== 7. 성공 응답 ====================
 echo json_encode([
-    'success' => true,
-    'message' => '인증 코드를 전송했습니다. 메일함을 확인해주세요.',
-    'expire_minutes' => $expireMin,
+    'success'          => true,
+    'message'          => '인증 코드를 전송했습니다. 메일함을 확인해주세요.',
+    'expire_minutes'   => $expireMin,
     'cooldown_seconds' => $cooldownSec
 ]);
 exit;
@@ -211,7 +211,7 @@ function buildMailHtml(string $code, int $expireMin): string {
 <body style="margin:0; padding:0; background:#f5f5f5; font-family:'Pretendard','맑은 고딕',sans-serif;">
   <div style="max-width:480px; margin:40px auto; background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,0.05);">
     <div style="background:#000; color:#fff; padding:30px 24px; text-align:center;">
-      <h1 style="margin:0; font-size:24px; font-weight:600;">오노추</h1>
+      <h1 style="margin:0; font-size:24px; font-weight:600;">쉐어뮤직</h1>
       <p style="margin:8px 0 0; font-size:14px; opacity:0.8;">이메일 인증 코드</p>
     </div>
     <div style="padding:36px 24px; text-align:center;">
@@ -229,7 +229,7 @@ function buildMailHtml(string $code, int $expireMin): string {
       </p>
     </div>
     <div style="background:#fafafa; padding:16px; text-align:center; font-size:11px; color:#bbb;">
-      © 오노추 · 자동 발송 메일
+      © 쉐어뮤직 · 자동 발송 메일
     </div>
   </div>
 </body>

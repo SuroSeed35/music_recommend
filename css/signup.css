@@ -264,3 +264,123 @@ body {
 .status-info {
     color: #666;
 }
+
+/* =========================================================
+   인증코드 6자리 박스 입력 UI (추가)
+   ========================================================= */
+
+/* 박스 6개 가로 배치 컨테이너 */
+.code-box-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    width: 100%;
+}
+
+/* 개별 입력 박스 */
+.code-box {
+    flex: 1;
+    min-width: 0; /* flex 아이템 overflow 방지 */
+    aspect-ratio: 1 / 1.15;
+    max-width: 48px;
+    text-align: center;
+    font-size: 22px;
+    font-weight: 700;
+    color: #000;
+    border: 1.5px solid #d1d1d1;
+    border-radius: 8px;
+    background-color: #fff;
+    outline: none;
+    padding: 0;
+    transition: all 0.15s ease;
+    -webkit-appearance: none;
+    -moz-appearance: textfield;
+    appearance: none;
+    caret-color: #000;
+}
+
+/* 숫자 input의 화살표 제거 */
+.code-box::-webkit-outer-spin-button,
+.code-box::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* 포커스 상태 */
+.code-box:focus {
+    border-color: #000;
+    border-width: 2px;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* 값이 채워진 박스 */
+.code-box.filled {
+    background-color: #fafafa;
+    border-color: #000;
+}
+
+/* 인증 완료 상태 (성공 후 비활성화) */
+.code-box.verified {
+    background-color: #f0fdf4 !important;
+    border-color: #22c55e !important;
+    color: #15803d !important;
+}
+
+/* 인증 실패 시 흔들림 효과 */
+.code-box.error {
+    border-color: #ff4d4f !important;
+    animation: shake 0.4s ease;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+}
+
+/* 비활성화 */
+.code-box:disabled {
+    background-color: #f5f5f5;
+    color: #999;
+    cursor: not-allowed;
+}
+
+/* 가로 전체 너비 확인 버튼 (기존 .verify-btn과 분리) */
+.verify-btn-full {
+    width: 100%;
+    padding: 12px 16px;
+    background-color: #000;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    margin-top: 4px;
+    margin-bottom: 8px;
+}
+
+.verify-btn-full:hover:not(:disabled) {
+    background-color: #333;
+}
+
+.verify-btn-full:disabled {
+    background-color: #d1d1d1;
+    color: #888;
+    cursor: not-allowed;
+}
+
+/* 모바일 작은 화면 대응 (360px 이하) */
+@media (max-width: 360px) {
+    .code-box-row {
+        gap: 6px;
+    }
+    .code-box {
+        font-size: 18px;
+        max-width: 42px;
+    }
+}
