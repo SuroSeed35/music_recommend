@@ -19,13 +19,10 @@ style.innerHTML = `
     .thumb-area { position: relative; }
     .rolling-comment {
         position: absolute;
-        bottom: 14px; /* [수정] 기존 6px에서 위로 더 띄움 */
-        left: 14px;   /* [수정] 기존 6px에서 오른쪽으로 더 이동 (여백 추가) */
-        
-        /* 💡 만약 아예 '오른쪽 아래' 구석에 배치하고 싶다면 위의 left: 14px; 대신 right: 14px; 를 적어주시면 됩니다! */
-        
-        background: rgba(255, 255, 255, 0.9); /* [수정] 배경 흰색 (90% 투명도) */
-        color: #222222;                       /* [수정] 글자색을 어두운 색으로 변경 */
+        bottom: 14px;
+        left: 14px;
+        background: rgba(255, 255, 255, 0.9);
+        color: #222222;
         padding: 5px 10px;
         border-radius: 12px;
         font-size: 11px;
@@ -37,7 +34,7 @@ style.innerHTML = `
         transition: opacity 0.5s ease-in-out;
         pointer-events: none;
         z-index: 10;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15); /* [추가] 흰색 배경이 썸네일 위에서 잘 보이도록 부드러운 그림자 추가 */
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     }
 `;
 document.head.appendChild(style);
@@ -86,11 +83,11 @@ function setupDateNavigation() {
     }
     const dateDisplay = document.getElementById("today-date");
     if (dateDisplay) {
-        dateDisplay.style.cursor = "pointer"; // 클릭 가능하다는 시각적 표시
+        dateDisplay.style.cursor = "pointer";
         dateDisplay.onclick = () => {
-            currentDate = new Date(); // 오늘 날짜로 초기화
+            currentDate = new Date();
             currentDate.setHours(0, 0, 0, 0);
-            updateDateDisplay(); // 화면 갱신
+            updateDateDisplay();
         };
     }
 }
@@ -109,6 +106,9 @@ async function loadData() {
 
         // 1. 피드(노래) 목록 출력
         renderFeedSongs(data.feed_songs);
+
+        // 🔥 [추가] 전체 재생 큐 동기화
+        PlayAll.syncQueue(data.feed_songs);
 
         // 2. 친구 요청 목록 출력
         renderRequests(data.requests);
@@ -133,13 +133,11 @@ function renderFeedSongs(songs) {
 
     container.innerHTML = '';
 
-    // 오늘 날짜와 현재 화면의 날짜를 비교하기 위한 세팅
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const targetDate = new Date(currentDate);
     targetDate.setHours(0, 0, 0, 0);
 
-    // 1. 미래의 날짜인 경우 전체 안내문 출력 후 종료
     if (targetDate > today) {
         const dateStr = formatDate(targetDate).replace(/-/g, '.');
         container.innerHTML = `<div class="empty-msg" style="text-align:center; margin-top:50px; color:#999; font-weight:700; font-size:16px;">아직 ${dateStr}가 되지 않았습니다.</div>`;
@@ -151,7 +149,6 @@ function renderFeedSongs(songs) {
         return;
     }
 
-    // 2. 과거인지 오늘인지에 따라 빈 상태일 때의 안내 문구 변경
     let emptyMsg = '추천을 기다리고 있어요 🎧';
     if (targetDate < today) {
         emptyMsg = '추천한 노래가 없습니다.';
@@ -161,13 +158,10 @@ function renderFeedSongs(songs) {
         const card = document.createElement('div');
         card.className = 'song-card'; 
 
-        // 썸네일용 이름: 내 것인 경우 앞에 '(나)'를 붙임
         const thumbName = song.is_me == 1 ? `(나) ${song.username}` : song.username;
-        // 정보칸용 이름: '(나)' 없이 깔끔하게 닉네임만 표시
         const infoName = song.username;
 
         if (song.song_id) {
-            // ✅ 음악을 등록한 사람: 정보칸 이름은 '(나)' 없이 나옴 + 댓글 버튼 포함
             card.innerHTML = `
                 <div class="song-scroll-wrapper">
                     <div class="thumb-area" style="cursor: pointer;">
@@ -194,7 +188,6 @@ function renderFeedSongs(songs) {
                 thumbArea.onclick = () => window.open(song.youtube_url, '_blank');
             }
 
-            // ▼▼▼ 댓글 버튼 이벤트 연결 ▼▼▼
             const commentBtn = card.querySelector('.comment-btn');
             if (commentBtn) {
                 commentBtn.onclick = (e) => {
@@ -203,11 +196,9 @@ function renderFeedSongs(songs) {
                 };
             }
         } else {
-            // ✅ 음악을 등록하지 않은 사람 (z-index: 2 추가하여 완전한 흰색으로 표시)
             card.innerHTML = `
                 <div class="song-scroll-wrapper">
                     <div class="thumb-area wavy-bw-gradient">
-                        <!-- 🔥 z-index: 2 를 추가하여 어두운 필터보다 위로 올렸습니다! -->
                         <div style="position: absolute; bottom: 20px; left: 20px; color: #ffffff; text-shadow: 0 1px 6px rgba(0,0,0,0.8); font-size: 17px; font-weight: 800; z-index: 2;">
                             
                         </div>
@@ -227,9 +218,6 @@ function renderFeedSongs(songs) {
     });
 }
 
-/**
- * 나에게 온 친구 요청 렌더링
- */
 function renderRequests(requests) {
     const reqList = document.getElementById('requestListContainer');
     if (!reqList) return;
@@ -247,9 +235,6 @@ function renderRequests(requests) {
     }
 }
 
-/**
- * 그룹 목록 렌더링
- */
 function renderGroups(groups) {
     const groupList = document.getElementById('groupListContainer');
     if (!groupList) return;
@@ -284,9 +269,6 @@ function renderGroups(groups) {
     });
 }
 
-/**
- * 친구 목록 렌더링
- */
 function renderFriends(friends) {
     const friendList = document.getElementById('friendMainList');
     if (!friendList) return;
@@ -300,9 +282,6 @@ function renderFriends(friends) {
     });
 }
 
-/**
- * 기존 섹션 접힘 상태 복원
- */
 function restoreToggleStates() {
     document.querySelectorAll('.collapsible-content').forEach((list, index) => {
         const isCollapsed = localStorage.getItem(`section_collapsed_${index}`) === 'true';
@@ -322,14 +301,12 @@ async function loadMyInfoIntoGroup() {
     groupListContainer.className = "group-list-container";
     
     try {
-        // [수정 완료] 캐시 방지 시간값 추가
         const userRes = await fetch('../php/get_user_info.php?t=' + new Date().getTime());
         const userData = await userRes.json();
         
         if (userData.success) {
             const currentMainGroupId = userData.main_group_id ? Number(userData.main_group_id) : 0; 
 
-            // --- [나] 항목 ---
             const myItem = document.createElement('div');
             myItem.className = "group-item"; 
             
@@ -337,7 +314,6 @@ async function loadMyInfoIntoGroup() {
                 myItem.classList.add("active");
             }
 
-            // [수정 완료] 나 항목 user-profile.jpg 강제 적용
             myItem.innerHTML = `
                 <div class="group-icon-circle" style="background: none; overflow: hidden; border: 1px solid #eee;">
                     <img src="../img/user-profile.jpg" alt="me" style="width: 100%; height: 100%; object-fit: cover;">
@@ -351,7 +327,6 @@ async function loadMyInfoIntoGroup() {
             };
             groupListContainer.appendChild(myItem);
 
-            // --- [참여 중인 그룹] 목록 ---
             const groupRes = await fetch('../php/fetch_my_groups.php?t=' + new Date().getTime());
             const groupData = await groupRes.json();
 
@@ -364,7 +339,6 @@ async function loadMyInfoIntoGroup() {
                         gItem.classList.add("active"); 
                     }
 
-                    // [수정 완료] 그룹 항목 group-profile.jpg 강제 적용
                     let groupImg = group.group_profile_img;
                     if (!groupImg || groupImg === '../img/group.png') {
                         groupImg = '../img/group-profile.jpg';
@@ -390,7 +364,6 @@ async function loadMyInfoIntoGroup() {
     }
 }
 
-// --- 예쁜 커스텀 모달 생성 함수 ---
 function showCustomModal(message, onConfirm) {
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 9999; opacity: 0; transition: opacity 0.2s;';
@@ -438,7 +411,6 @@ function showCustomModal(message, onConfirm) {
     });
 }
 
-// 메인 그룹 변경 실행 함수 
 function changeMainGroup(groupId, groupName) {
     showCustomModal(`'${groupName}'(으)로 변경하시겠습니까?`, async () => {
         try {
@@ -458,22 +430,18 @@ function changeMainGroup(groupId, groupName) {
 }
 
 // --- 7. 바텀 시트 제스처 ---
-// 🔥 [수정됨] 3단계 상태 머신: closed ↔ half ↔ full
 function setupSwipeGesture() {
     const sheet = document.getElementById('bottomSheet');
     if (!sheet) return;
 
-    // 상태: 'closed' | 'half' | 'full'
     let currentState = 'closed';
 
-    // 터치 시작 정보
     let startY = 0;
     let startTarget = null;
-    let isInsideScroll = false; // 시작점이 그룹 리스트(스크롤 영역) 내부였는지
+    let isInsideScroll = false;
 
     const groupList = document.getElementById('real-group-list');
 
-    // 상태 전이 적용 (DOM 클래스 토글)
     const applyState = (next) => {
         if (next === currentState) return;
         sheet.classList.remove('state-closed', 'state-half', 'state-full', 'show');
@@ -482,71 +450,50 @@ function setupSwipeGesture() {
         } else if (next === 'full') {
             sheet.classList.add('state-full');
         }
-        // closed 상태는 클래스 없는 것이 기본 (CSS의 transform 기본값)
         currentState = next;
     };
 
-    // 상태 전이 규칙
     const transition = (direction) => {
-        // direction: 'up' | 'down'
         if (direction === 'up') {
             if (currentState === 'closed') applyState('half');
             else if (currentState === 'half') applyState('full');
-            // full 상태에서 위로 스와이프는 무시
         } else if (direction === 'down') {
             if (currentState === 'full') applyState('half');
             else if (currentState === 'half') applyState('closed');
-            // closed 상태에서 아래로 스와이프는 무시
         }
     };
 
-    // === 터치 시작 ===
     document.addEventListener('touchstart', (e) => {
         startY = e.touches[0].clientY;
         startTarget = e.target;
-
-        // 시작점이 그룹 리스트 내부인지 검사 (스크롤 위임 판단용)
         isInsideScroll = !!(groupList && groupList.contains(startTarget));
     }, { passive: true });
 
-    // === 터치 종료 ===
     document.addEventListener('touchend', (e) => {
         const endY = e.changedTouches[0].clientY;
-        const deltaY = startY - endY; // 양수=위로, 음수=아래로
-        const THRESHOLD = 50; // 임계값 (px)
+        const deltaY = startY - endY;
+        const THRESHOLD = 50;
 
-        // 임계값 미달이면 무시
         if (Math.abs(deltaY) < THRESHOLD) return;
 
         const direction = deltaY > 0 ? 'up' : 'down';
 
-        // === 내부 스크롤 위임 판단 ===
-        // 시트가 full 상태이고, 시작점이 스크롤 영역 안이며,
-        // 스크롤이 끝에 도달하지 않은 경우 → 시트 제스처 무시 (내부 스크롤 우선)
         if (currentState === 'full' && isInsideScroll && groupList) {
             const canScrollDown = groupList.scrollTop + groupList.clientHeight < groupList.scrollHeight - 1;
             const canScrollUp   = groupList.scrollTop > 0;
-
-            // 위로 스와이프(콘텐츠를 위로 = 아래로 스크롤) 가능 → 시트 무시
             if (direction === 'up' && canScrollDown) return;
-            // 아래로 스와이프 시: 스크롤이 맨 위가 아니라면 스크롤 우선
             if (direction === 'down' && canScrollUp) return;
         }
 
-        // === 시트 외부에서의 시작 제약 ===
-        // closed 상태일 때 위로 스와이프는, 시트 위에서 시작하거나 화면 하단에서 시작한 경우만 인정
-        // (화면 중앙에서 시작한 스와이프로 시트가 갑자기 뜨는 것 방지 - 기존 동작 호환)
         if (currentState === 'closed' && direction === 'up') {
             const startedFromSheet = sheet.contains(startTarget);
             const startedFromBottom = startY > window.innerHeight * 0.7;
             if (!startedFromSheet && !startedFromBottom) return;
         }
 
-        // 상태 전이 실행
         transition(direction);
     }, { passive: true });
 
-    // === 핸들 클릭(탭)으로도 단계 전환 (데스크톱 보강) ===
     const handle = document.getElementById('dragHandle');
     if (handle) {
         handle.addEventListener('click', () => {
@@ -564,6 +511,9 @@ function setupEventListeners() {
     if (toggle) {
         toggle.onclick = () => content.classList.toggle('collapsed');
     }
+
+    // 🔥 [추가] 전체 재생 기능 초기화
+    PlayAll.init();
 }
 
 // ============================================================
@@ -583,20 +533,16 @@ function openCommentModal(songId) {
     checkCommentPermission();
     loadComments(songId);
 
-    // 오버레이 바깥 클릭 시 닫기
     overlay.onclick = (e) => {
         if (e.target === overlay) closeCommentModal();
     };
 
-    // X 버튼
     const closeBtn = document.getElementById('commentModalClose');
     if (closeBtn) closeBtn.onclick = closeCommentModal;
 
-    // 등록 버튼
     const submitBtn = document.getElementById('commentSubmitBtn');
     if (submitBtn) submitBtn.onclick = submitComment;
 
-    // 엔터로 등록
     if (input) {
         input.onkeydown = (e) => {
             if (e.key === 'Enter') {
@@ -644,13 +590,10 @@ async function loadComments(songId) {
                 ? `<button class="comment-item-delete" data-id="${c.comment_id}">삭제</button>`
                 : '';
 
-            // 👇 [추가] 방 이름(group_name)이 있을 때만 유저 이름 옆에 회색 뱃지를 생성합니다.
-            // 나 혼자 있는 방이 아닐 때는 백엔드에서 group_name을 비워서 주므로 자동으로 안 뜹니다!
             const groupBadge = c.group_name 
                 ? `<span style="font-size: 11px; color: #666; background: #e9ecef; padding: 2px 6px; border-radius: 8px; margin-left: 6px; font-weight: 600;">${escapeHtml(c.group_name)}</span>` 
                 : '';
 
-            // 👇 [수정] 헤더 구조를 정렬하여 이름 바로 옆에 뱃지가 붙도록 수정했습니다.
             item.innerHTML = `
                 <div class="comment-item-header">
                     <div style="display: flex; align-items: center;">
@@ -667,12 +610,10 @@ async function loadComments(songId) {
             listArea.appendChild(item);
         });
 
-        // 삭제 버튼 이벤트 연결
         listArea.querySelectorAll('.comment-item-delete').forEach(btn => {
             btn.onclick = () => deleteComment(parseInt(btn.dataset.id));
         });
 
-        // 스크롤 맨 아래로 (최신 댓글 보이게)
         listArea.scrollTop = listArea.scrollHeight;
 
     } catch (err) {
@@ -728,11 +669,8 @@ function deleteComment(commentId) {
             const data = await res.json();
 
             if (data.success) {
-                await loadComments(currentCommentSongId); // 기존 댓글 목록 새로고침
-                
-                // 👇 이 부분이 추가되었습니다!
+                await loadComments(currentCommentSongId);
                 showToast('댓글이 삭제되었습니다.'); 
-                
             } else {
                 alert(data.message || '삭제 실패');
             }
@@ -743,7 +681,6 @@ function deleteComment(commentId) {
     });
 }
 
-// XSS 방지용 HTML 이스케이프
 function escapeHtml(str) {
     if (!str) return '';
     return String(str)
@@ -754,7 +691,6 @@ function escapeHtml(str) {
         .replace(/'/g, '&#39;');
 }
 
-// 시간 포맷팅
 function formatCommentTime(timestamp) {
     if (!timestamp) return '';
     const d = new Date(timestamp.replace(' ', 'T'));
@@ -772,18 +708,15 @@ function formatCommentTime(timestamp) {
     return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
 }
 
-// --- 토스트 알림 (하단에 연하게 떴다가 사라지는 알림) ---
 function showToast(message) {
     const toast = document.createElement('div');
     toast.innerText = message;
-    
-    // 토스트 스타일 설정 (하단 중앙 배치, 반투명 검정 배경, 둥근 모서리)
     toast.style.cssText = `
         position: fixed;
-        bottom: 80px; /* 화면 하단에서의 높이 */
+        bottom: 80px;
         left: 50%;
         transform: translateX(-50%);
-        background-color: rgba(0, 0, 0, 0.65); /* 연한 검정 반투명 */
+        background-color: rgba(0, 0, 0, 0.65);
         color: #fff;
         padding: 12px 24px;
         border-radius: 25px;
@@ -792,25 +725,19 @@ function showToast(message) {
         z-index: 10000;
         opacity: 0;
         transition: opacity 0.3s ease-in-out;
-        pointer-events: none; /* 클릭 방해 안 함 */
+        pointer-events: none;
         box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     `;
-    
     document.body.appendChild(toast);
-
-    // 약간의 딜레이 후 서서히 나타나게 함 (fade-in)
     requestAnimationFrame(() => {
         toast.style.opacity = '1';
     });
-
-    // 2초 뒤에 서서히 사라지고 (fade-out), DOM에서 완전히 제거
     setTimeout(() => {
         toast.style.opacity = '0';
         setTimeout(() => document.body.removeChild(toast), 300);
     }, 2000);
 }
 
-// 1. 오늘 날짜인지 체크하는 헬퍼 함수 (파일 상단이나 빈 곳에 추가)
 function isToday(dateToCheck) {
     const today = new Date();
     return dateToCheck.getFullYear() === today.getFullYear() &&
@@ -818,41 +745,30 @@ function isToday(dateToCheck) {
            dateToCheck.getDate() === today.getDate();
 }
 
-// 2. 댓글 모달을 열거나 렌더링하는 함수 내부에서 입력창 제어
 function checkCommentPermission() {
-    const commentInputContainer = document.querySelector('.comment-input-area'); // 댓글 입력창(input + button)을 감싸는 div 클래스명
-    
-    // 만약 이미 안내 문구가 있다면 제거
+    const commentInputContainer = document.querySelector('.comment-input-area');
     const existingMsg = document.getElementById('not-today-msg');
     if (existingMsg) existingMsg.remove();
 
     if (isToday(currentDate)) {
-        // 오늘이면 입력창 표시
         if (commentInputContainer) commentInputContainer.style.display = 'flex'; 
     } else {
-        // 오늘이 아니면 입력창 숨기고 안내 메시지 표시
         if (commentInputContainer) {
             commentInputContainer.style.display = 'none';
-            
             const msgDiv = document.createElement('div');
             msgDiv.id = 'not-today-msg';
             msgDiv.style.cssText = 'text-align: center; padding: 15px; color: #888; font-size: 13px;';
             msgDiv.innerText = '당일 추천 곡에만 댓글을 작성할 수 있습니다.';
-            
             commentInputContainer.parentNode.insertBefore(msgDiv, commentInputContainer.nextSibling);
         }
     }
 }
 
-// 특정 곡의 댓글들을 가져와서 썸네일 위에서 롤링(돌아가며 보여줌)하는 함수
-// 특정 곡의 댓글들을 가져와서 썸네일 위에서 롤링(이름 볼드체 + 배경 화이트)하는 함수
 async function startRollingComments(songId) {
     try {
-        // 해당 곡의 댓글 목록 가져오기
         const res = await fetch(`../php/api.php?action=get_comments&song_id=${songId}`);
         const data = await res.json();
 
-        // 댓글이 없거나 실패하면 종료
         if (!data.success || !data.comments || data.comments.length === 0) return;
 
         const rollingBox = document.getElementById(`rolling-comment-${songId}`);
@@ -861,36 +777,284 @@ async function startRollingComments(songId) {
         const comments = data.comments;
         let currentIndex = 0;
 
-        // 💡 [추가] 이름(Bold) + 댓글 내용을 안전하게 가공하여 넣어주는 헬퍼 함수
         const displayComment = (comment) => {
             const safeUser = escapeHtml(comment.username || '익명');
             const safeContent = escapeHtml(comment.content || '');
-            // 왼쪽에 이름을 볼드체(strong)로 배치하고 약간의 여백(margin-right)을 줍니다.
             rollingBox.innerHTML = `<strong style="font-weight: 700; margin-right: 5px;">${safeUser}</strong>${safeContent}`;
         };
 
-        // 첫 번째 댓글 즉시 표시
         displayComment(comments[currentIndex]);
         rollingBox.style.opacity = '1';
 
-        // 댓글이 2개 이상일 경우 3.5초마다 변경
         if (comments.length > 1) {
             setInterval(() => {
-                // 1. 서서히 사라짐
                 rollingBox.style.opacity = '0'; 
-                
                 setTimeout(() => {
-                    // 2. 텍스트 변경
                     currentIndex = (currentIndex + 1) % comments.length;
                     displayComment(comments[currentIndex]);
-                    
-                    // 3. 서서히 나타남
                     rollingBox.style.opacity = '1'; 
-                }, 500); // 0.5초(사라지는 시간) 대기 후 교체
-                
-            }, 3500); // 3.5초 주기로 실행
+                }, 500);
+            }, 3500);
         }
     } catch (err) {
         console.error('롤링 댓글 로드 실패:', err);
     }
 }
+
+// ============================================================
+// 🔥 [추가] 전체 재생 & 미니 플레이어 (앱 내 IFrame 재생)
+// ============================================================
+
+const PlayAll = (() => {
+    let player = null;
+    let apiReady = false;
+    let pendingStart = false;
+    let queue = [];
+    let currentIndex = -1;
+    let isPlaying = false;
+    let initialized = false;
+
+    let $playAllBtn, $miniPlayer, $thumb, $title, $sub;
+    let $prev, $playPause, $playPauseIcon, $next, $close;
+
+    function extractYouTubeID(url) {
+        if (!url) return null;
+        const reg = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
+        const m = url.match(reg);
+        return (m && m[1].length === 11) ? m[1] : null;
+    }
+
+    window.onYouTubeIframeAPIReady = function() {
+        apiReady = true;
+        try {
+            player = new YT.Player('yt-player', {
+                height: '1',
+                width: '1',
+                playerVars: {
+                    autoplay: 0,
+                    controls: 0,
+                    disablekb: 1,
+                    fs: 0,
+                    modestbranding: 1,
+                    playsinline: 1,
+                    rel: 0
+                },
+                events: {
+                    onReady: onPlayerReady,
+                    onStateChange: onPlayerStateChange,
+                    onError: onPlayerError
+                }
+            });
+        } catch (e) {
+            console.error('[PlayAll] YT.Player 생성 실패:', e);
+        }
+    };
+
+    function onPlayerReady() {
+        if (pendingStart && queue.length > 0) {
+            pendingStart = false;
+            playAt(0);
+        }
+    }
+
+    function onPlayerStateChange(e) {
+        if (e.data === YT.PlayerState.PLAYING) {
+            setPlayingUI(true);
+        } else if (e.data === YT.PlayerState.PAUSED) {
+            setPlayingUI(false);
+        } else if (e.data === YT.PlayerState.ENDED) {
+            playNext();
+        }
+    }
+
+    function onPlayerError(e) {
+        console.warn('[PlayAll] YT 에러:', e && e.data);
+        showToastSafe('이 영상은 재생할 수 없습니다. 다음 곡으로 넘어갑니다.');
+        setTimeout(() => playNext(), 400);
+    }
+
+    function syncQueue(feedSongs) {
+        const newQueue = (feedSongs || [])
+            .filter(s => s && s.song_id && s.youtube_url)
+            .map(s => ({
+                songId: s.song_id,
+                videoId: extractYouTubeID(s.youtube_url),
+                title: s.title || '제목 없음',
+                thumb: s.thumbnail_img || '',
+                username: s.username || '',
+                loginId: s.login_id || ''
+            }))
+            .filter(item => item.videoId);
+
+        const wasPlayingThisQueue = isPlaying && queue.length > 0;
+        queue = newQueue;
+
+        if ($playAllBtn) {
+            $playAllBtn.disabled = (queue.length === 0);
+        }
+
+        if (wasPlayingThisQueue) {
+            if (queue.length === 0) {
+                stopAll();
+            } else {
+                playAt(0);
+            }
+        }
+    }
+
+    function startPlayAll() {
+        if (queue.length === 0) {
+            showToastSafe('재생할 곡이 없습니다');
+            return;
+        }
+        showMiniPlayer();
+
+        if (!apiReady || !player || typeof player.loadVideoById !== 'function') {
+            pendingStart = true;
+            currentIndex = 0;
+            renderMiniPlayer();
+            setPlayingUI(true);
+            return;
+        }
+        playAt(0);
+    }
+
+    function playAt(index) {
+        if (index < 0 || index >= queue.length) return;
+        currentIndex = index;
+        renderMiniPlayer();
+
+        if (!player || typeof player.loadVideoById !== 'function') {
+            pendingStart = true;
+            return;
+        }
+        try {
+            // 🔥 cueVideoById로 큐에만 올리고
+            player.cueVideoById(queue[currentIndex].videoId);
+            // 🔥 약간의 딜레이 후 명시적으로 재생 트리거
+            setTimeout(() => {
+                try {
+                    player.playVideo();
+                    player.setVolume(100);   // 🔥 볼륨 명시
+                    player.unMute();          // 🔥 음소거 해제 명시
+                } catch (e) {}
+            }, 300);
+        } catch (e) {
+            console.error('[PlayAll] cueVideoById 실패:', e);
+        }
+    }
+
+    function playPrev() {
+        if (currentIndex > 0) {
+            playAt(currentIndex - 1);
+        } else {
+            try { player && player.seekTo(0, true); } catch (e) {}
+        }
+    }
+
+    function playNext() {
+        if (currentIndex < queue.length - 1) {
+            playAt(currentIndex + 1);
+        } else {
+            stopAll();
+        }
+    }
+
+    function togglePlayPause() {
+        if (!player) return;
+        try {
+            const state = player.getPlayerState && player.getPlayerState();
+            if (state === YT.PlayerState.PLAYING) {
+                player.pauseVideo();
+            } else {
+                player.playVideo();
+            }
+        } catch (e) {
+            console.error('[PlayAll] toggle 실패:', e);
+        }
+    }
+
+    function stopAll() {
+        try { player && player.stopVideo(); } catch (e) {}
+        isPlaying = false;
+        currentIndex = -1;
+        hideMiniPlayer();
+    }
+
+    function renderMiniPlayer() {
+        if (currentIndex < 0 || !queue[currentIndex]) return;
+        const item = queue[currentIndex];
+
+        if ($title) $title.textContent = item.title;
+        if ($sub) {
+            const who = item.username ? `@${item.loginId || item.username}` : '';
+            $sub.textContent = `${who} · ${currentIndex + 1} / ${queue.length}`;
+        }
+        if ($thumb) {
+            $thumb.src = item.thumb || '';
+            $thumb.alt = item.title;
+        }
+
+        if ($prev) $prev.disabled = (currentIndex <= 0);
+        if ($next) $next.disabled = (currentIndex >= queue.length - 1);
+    }
+
+    function setPlayingUI(playing) {
+        isPlaying = playing;
+        if (!$playPauseIcon) return;
+        $playPauseIcon.classList.remove('fa-play', 'fa-pause');
+        $playPauseIcon.classList.add(playing ? 'fa-pause' : 'fa-play');
+    }
+
+    function showMiniPlayer() {
+        if ($miniPlayer) {
+            $miniPlayer.classList.add('show');
+            $miniPlayer.setAttribute('aria-hidden', 'false');
+            $miniPlayer.removeAttribute('inert'); // 상호작용 허용
+        }
+    }
+
+    function hideMiniPlayer() {
+        if ($miniPlayer) {
+            if (document.activeElement && $miniPlayer.contains(document.activeElement)) {
+                document.activeElement.blur();
+            }
+            $miniPlayer.classList.remove('show');
+            $miniPlayer.setAttribute('aria-hidden', 'true');
+            $miniPlayer.setAttribute('inert', ''); // 포커스 및 상호작용 완전 차단
+        }
+    }
+
+    function showToastSafe(msg) {
+        if (typeof showToast === 'function') {
+            try { showToast(msg); return; } catch (e) {}
+        }
+        console.log('[PlayAll]', msg);
+    }
+
+    function init() {
+        if (initialized) return;
+        initialized = true;
+
+        $playAllBtn = document.getElementById('play-all-btn');
+        $miniPlayer = document.getElementById('miniPlayer');
+        $thumb = document.getElementById('miniPlayerThumb');
+        $title = document.getElementById('miniPlayerTitle');
+        $sub = document.getElementById('miniPlayerSub');
+        $prev = document.getElementById('mpPrevBtn');
+        $playPause = document.getElementById('mpPlayPauseBtn');
+        $playPauseIcon = document.getElementById('mpPlayPauseIcon');
+        $next = document.getElementById('mpNextBtn');
+        $close = document.getElementById('mpCloseBtn');
+
+        if ($playAllBtn) $playAllBtn.addEventListener('click', startPlayAll);
+        if ($prev) $prev.addEventListener('click', playPrev);
+        if ($next) $next.addEventListener('click', playNext);
+        if ($playPause) $playPause.addEventListener('click', togglePlayPause);
+        if ($close) $close.addEventListener('click', stopAll);
+
+        if ($playAllBtn) $playAllBtn.disabled = (queue.length === 0);
+    }
+
+    return { init, syncQueue };
+})();

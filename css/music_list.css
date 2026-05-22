@@ -110,6 +110,8 @@ html {
     flex-direction: column;
     justify-content: center;
     border-left: 1px solid rgba(255, 255, 255, 0.5);
+    /* 댓글 버튼 기준점 (기존 코드 하단의 중복 규칙에서 통합) */
+    position: relative;
 }
 
 .info-area .user { 
@@ -123,6 +125,10 @@ html {
     font-weight: 800; 
     color: #000; 
     line-height: 1.5; 
+
+    /* 🔥 아래 두 줄을 추가하세요 */
+    word-break: break-all;   /* 긴 단어도 박스 끝에서 강제로 줄 바꿈 */
+    white-space: normal;     /* 줄 바꿈 허용 */
 }
 
 .thumb-area { position: relative; background: #eee; }
@@ -151,11 +157,11 @@ html {
 }
 
 /* --- 5. 사이드바 --- */
+/* (사이드바 위치는 미니 플레이어와 겹치지 않도록 bottom: 100px 유지) */
 .side-bar-container { 
     position: fixed; 
-    right: 25px;
-    bottom: 80px; 
-    z-index: 1000; 
+    right: 20px;
+    bottom: 100px; /* 플레이어 높이보다 높게 설정 */
     display: flex; 
     flex-direction: column; 
     align-items: center; 
@@ -187,6 +193,12 @@ html {
     justify-content: center; 
     align-items: center; 
     cursor: pointer; 
+}
+
+.side-btn img {
+    object-fit: contain;
+    opacity: 0.8; 
+    transition: opacity 0.2s;
 }
 
 /* --- 6. 바텀 시트 --- */
@@ -239,6 +251,8 @@ html {
     justify-content: center; 
     align-items: center; 
     cursor: pointer; 
+    /* 드래그 핸들 영역 확장 (클릭하기 쉽게) */
+    padding: 15px 0;
 }
 
 .handle-bar { 
@@ -250,6 +264,13 @@ html {
 
 .group-content-area { 
     padding: 10px 20px 30px; 
+    /* 바텀 시트 하단 여백 보정 (아이폰 노치 등 대응) */
+    /* 🔥 [수정됨] flex 컨테이너로 만들어 내부 스크롤 영역(#real-group-list)이 자연스럽게 늘어나도록 */
+    padding-bottom: calc(30px + env(safe-area-inset-bottom));
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .group-header-text { 
@@ -293,6 +314,19 @@ html {
     flex-shrink: 0;
 }
 
+/* 그룹 아이콘 원형 내부 이미지 설정 */
+.group-icon-circle img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;        /* 이미지가 원에 꽉 차게 */
+    border-radius: 50%;
+}
+
+/* 이미지가 없을 때 사용될 기본 아이콘 스타일 */
+.group-icon-circle i {
+    font-size: 18px;
+}
+
 .icon-black { background-color: #111; color: #fff; }
 .icon-blue { background-color: #0084ff; color: #fff; }
 
@@ -303,30 +337,11 @@ html {
     letter-spacing: -0.3px;
 }
 
-.side-btn img {
-    object-fit: contain;
-    opacity: 0.8; 
-    transition: opacity 0.2s;
-}
-
 .post-time {
     font-size: 11px;
     color: rgba(0, 0, 0, 0.3);
     margin-top: 12px;
     font-weight: 500;
-}
-
-/* music_list.css 파일 내 수정 */
-
-.info-area .msg {
-    font-size: 17px;
-    font-weight: 800;
-    color: #000;
-    line-height: 1.5;
-
-    /* 🔥 아래 두 줄을 추가하세요 */
-    word-break: break-all;   /* 긴 단어도 박스 끝에서 강제로 줄 바꿈 */
-    white-space: normal;     /* 줄 바꿈 허용 */
 }
 
 /* 실질적인 그룹 리스트 스크롤 영역 */
@@ -350,43 +365,9 @@ html {
     display: none;
 }
 
-/* 그룹 아이콘 원형 내부 이미지 설정 */
-.group-icon-circle img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;        /* 이미지가 원에 꽉 차게 */
-    border-radius: 50%;
-}
-
-/* 이미지가 없을 때 사용될 기본 아이콘 스타일 */
-.group-icon-circle i {
-    font-size: 18px;
-}
-
-/* 드래그 핸들 영역 확장 (클릭하기 쉽게) */
-.drag-handle {
-    padding: 15px 0; /* 기존 18px 높이를 패딩으로 감싸 영역 확대 */
-}
-
-/* 바텀 시트 하단 여백 보정 (아이폰 노치 등 대응) */
-/* 🔥 [수정됨] flex 컨테이너로 만들어 내부 스크롤 영역(#real-group-list)이 자연스럽게 늘어나도록 */
-.group-content-area {
-    padding-bottom: calc(30px + env(safe-area-inset-bottom));
-    /* 🔥 [추가] flex로 늘어나면서 내부 스크롤 영역 공간 확보 */
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
 /* ============================================================
    댓글 버튼 & 댓글 모달 (덮어쓰기 안전 버전)
 ============================================================ */
-
-/* .info-area를 댓글 버튼의 기준점으로 사용 */
-.info-area {
-    position: relative;
-}
 
 /* 댓글 버튼: .info-area 우측 하단 */
 .comment-btn {
@@ -430,7 +411,7 @@ html {
     width: 100vw !important;
     height: 100vh !important;
     background: rgba(0, 0, 0, 0.5) !important;
-    z-index: 3000 !important;
+    z-index: 10000 !important;
     justify-content: center !important;
     align-items: center !important;
 }
@@ -569,23 +550,262 @@ html {
     /* 기존 스타일 유지 */
 }
 
-/* 썸네일 위 롤링 댓글 스타일 */
+/* 썸네일 위 롤링 댓글 스타일 (JS에서도 동일 스타일 주입하지만 정적 fallback 유지) */
 .rolling-comment {
     position: absolute;
-    bottom: 6px;
-    left: 6px;
-    background: rgba(0, 0, 0, 0.65); /* 반투명 검정 배경 */
-    color: #fff;
-    padding: 4px 8px;
+    bottom: 14px;
+    left: 14px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #222222;
+    padding: 5px 10px;
     border-radius: 12px;
     font-size: 11px;
     font-weight: 500;
     max-width: 85%;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis; /* 글자가 길면 ... 처리 */
+    text-overflow: ellipsis;
     opacity: 0; 
-    transition: opacity 0.5s ease-in-out; /* 부드러운 페이드인/아웃 */
-    pointer-events: none; /* 터치/클릭 방해 금지 */
+    transition: opacity 0.5s ease-in-out;
+    pointer-events: none;
     z-index: 10;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+/* ============================================================
+   🔥 [추가] 전체 재생 버튼 + 미니 플레이어 (앱 내 IFrame 재생)
+   ============================================================ */
+
+/* 빈 그라데이션 카드용 키프레임 (JS에서도 주입되지만 정적 fallback) */
+@keyframes waveGradient {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+.wavy-bw-gradient {
+    background: linear-gradient(-45deg, #1a1a1a, #868e96, #ced4da, #495057);
+    background-size: 400% 400%;
+    animation: waveGradient 8s ease infinite;
+}
+
+/* --- 전체 재생 버튼 행 --- */
+.play-all-row {
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+    padding: 0 16px 12px;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.play-all-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 16px;
+    background: #111;
+    color: #fff;
+    border: none;
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    transition: transform 0.12s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.play-all-btn:active {
+    transform: scale(0.96);
+}
+
+.play-all-btn:disabled {
+    background: #ccc;
+    color: #fff;
+    cursor: not-allowed;
+    box-shadow: none;
+    opacity: 0.7;
+}
+
+.play-all-btn i {
+    font-size: 11px;
+    transform: translateX(-1px); /* 시각적 균형 */
+}
+
+/* --- 숨겨진 YouTube IFrame 컨테이너 --- */
+#yt-player-wrapper {
+    position: fixed;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    bottom: 0;
+    left: 0;
+    opacity: 0;
+    pointer-events: none;
+    z-index: -1;
+}
+
+/* --- 미니 플레이어 바 (하단 고정) --- */
+.mini-player {
+    position: fixed;
+    left: 50%;
+    bottom: 16px;
+    transform: translate(-50%, 140%);
+    width: calc(100% - 24px);
+    max-width: 380px;
+    
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 16px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.16);
+    
+    opacity: 0;
+    visibility: hidden;
+    transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 0.25s ease,
+                visibility 0.25s ease;
+    z-index: 1500;
+}
+
+.mini-player.show {
+    transform: translate(-50%, 0);
+    opacity: 1;
+    visibility: visible;
+}
+
+/* 미니 플레이어 썸네일 */
+.mini-player-thumb {
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #eee;
+    position: relative;
+}
+
+.mini-player-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* 미니 플레이어 텍스트 정보 */
+.mini-player-info {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.mini-player-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #111;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mini-player-sub {
+    font-size: 11px;
+    color: #888;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 미니 플레이어 컨트롤 버튼 영역 */
+.mini-player-controls {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.mp-btn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    color: #222;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.15s, transform 0.1s;
+    padding: 0;
+}
+
+.mp-btn:active {
+    transform: scale(0.88);
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.mp-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.mp-btn i {
+    font-size: 13px;
+    pointer-events: none;
+}
+
+/* 메인(재생/일시정지) 버튼은 살짝 강조 */
+.mp-btn-main {
+    width: 36px;
+    height: 36px;
+    background: #111;
+    color: #fff;
+}
+
+.mp-btn-main:active {
+    background: #000;
+    transform: scale(0.92);
+}
+
+.mp-btn-main i {
+    font-size: 14px;
+}
+
+/* 닫기 버튼은 살짝 떨어뜨려서 영역 분리 */
+.mp-btn-close {
+    margin-left: 4px;
+    color: #999;
+}
+
+/* 모바일에서 너무 좁아지지 않도록 보호 */
+@media (max-width: 360px) {
+    .mini-player {
+        gap: 8px;
+        padding: 9px 10px;
+    }
+    .mini-player-thumb {
+        width: 40px;
+        height: 40px;
+    }
+    .mp-btn {
+        width: 30px;
+        height: 30px;
+    }
+    .mp-btn-main {
+        width: 34px;
+        height: 34px;
+    }
 }
