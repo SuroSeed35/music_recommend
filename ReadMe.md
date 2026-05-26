@@ -28,3 +28,10 @@ md_content = """# 🎵 오노추 (오늘의 노래 추천)
 - **`email_verifications`**: 회원가입 시 이메일 인증 코드 발송 내역 및 인증 유효 상태 관리
 
 ## 프로젝트 폴더 구조
+music_recommend/
+├── html/          # UI 페이지 (main, login, signup, calendar, mypage 등)
+├── css/           # 페이지별 스타일 시트
+├── js/            # 프론트엔드 동적 로직 및 API 호출 스크립트
+├── php/           # 백엔드 API 및 비즈니스 로직 (db_config, 로그인, 노래 CRUD, 이메일 전송 등)
+│   └── libs/      # 외부 라이브러리 (PHPMailer 등)
+└── img/           # 프로젝트 내 사용되는 각종 이미지 및 아이콘 (프로필, 로고 등)
