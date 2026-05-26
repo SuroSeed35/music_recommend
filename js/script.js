@@ -45,11 +45,25 @@ function setupForms() {
                 const data = await res.json();
 
                 if (data.success) {
+                    // 로그인 전용 랜덤 덕담 배열
+                    const loginGreetings = [
+                        "환영합니다.<br>오늘도 멋진 하루가 될 거예요!",
+                        "환영합니다.<br>당신의 하루를 응원합니다!",
+                        "반가워요!<br>행복이 가득한 하루 보내세요!",
+                        "보고 싶었어요.<br>수고했어요, 오늘도!",
+                        "환영합니다.<br>좋은 음악과 함께 활기찬 하루!",
+                        "반가워요!<br>오늘 하루도 빛날 거예요!",
+                        "환영합니다.<br>기분 좋은 일만 가득하길 바라요!"
+                    ];
+                    
+                    const randomMsg = loginGreetings[Math.floor(Math.random() * loginGreetings.length)];
+
                     document.body.innerHTML = `
                     <div style="display:flex; justify-content:center; align-items:center; height:100vh; background:#fff; font-family:'Pretendard', sans-serif;">
-                        <div style="font-size:40px; font-weight:600; color:#333; animation: fadeOut 1.5s forwards;">환영합니다.<br>좋은 하루 보내세요!</div>
+                        <div style="font-size:35px; font-weight:600; color:#333; text-align:center; line-height: 1.5; animation: fadeOut 1.5s forwards;">${randomMsg}</div>
                     </div>
                     <style>@keyframes fadeOut { 0%{opacity:0; transform:translateY(10px);} 20%{opacity:1; transform:translateY(0);} 80%{opacity:1;} 100%{opacity:0;} }</style>`;
+                    
                     setTimeout(() => { location.replace(data.redirect); }, 1300);
                 } else {
                     errorBox.innerText = data.message;

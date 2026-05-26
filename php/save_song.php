@@ -35,6 +35,7 @@ try {
         }
 
         // 3. 노래 정보를 DB에 먼저 저장
+        // 3. 노래 정보를 DB에 먼저 저장
         $sql = "INSERT INTO songs (user_id, youtube_url, title, daily_comment, thumbnail_img, log_date, log_time) 
                 VALUES ('$user_id', '$url', '$title', '$comment', '$thumb', '$current_date', '$current_time')";
         
@@ -42,27 +43,7 @@ try {
             $last_id = mysqli_insert_id($conn);
             mysqli_query($conn, "UPDATE users SET current_song_id = '$last_id' WHERE user_id = '$user_id'");
 
-            // ⭐️ 4. 저장이 성공했으니 이제 친구들에게 알림을 쏩니다!
-            include_once 'fcm_v1_send.php';
-
-            // 내 친구들 중 FCM 토큰이 있는 사람 목록 가져오기
-            $friend_sql = "SELECT u.fcm_token FROM friends f 
-                           JOIN users u ON (f.friend_id = u.user_id OR f.user_id = u.user_id)
-                           WHERE (f.user_id = '$user_id' OR f.friend_id = '$user_id') 
-                           AND f.status = 'accepted' AND u.user_id != '$user_id' AND u.fcm_token IS NOT NULL";
-            $friend_res = mysqli_query($conn, $friend_sql);
-
-            // 내 이름 가져오기
-            $me_res = mysqli_query($conn, "SELECT username FROM users WHERE user_id = '$user_id'");
-            $me_row = mysqli_fetch_assoc($me_res);
-            $my_name = $me_row['username'] ?? '친구';
-
-            // 친구들에게 한 명씩 발송
-            while($friend = mysqli_fetch_assoc($friend_res)) {
-                // 알림 내용 양식 수정: "[이름]님이 오늘의 노래를 추천했습니다![제목]"
-                sendFCMV1($friend['fcm_token'], "새로운 노래 추천", "{$my_name}님이 오늘의 노래를 추천했습니다![{$title}]");
-            }
-
+            // 알림 로직 제거, DB 저장만 완료되면 바로 성공 처리
             $response = ['success' => true];
         } else {
             throw new Exception('DB 저장 오류: ' . mysqli_error($conn));

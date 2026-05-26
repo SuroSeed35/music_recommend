@@ -3,6 +3,7 @@
 include 'php/db_config.php';
 session_start();
 
+
 // 1. 로그인이 안 되어 있으면 무조건 로그인 페이지로 보냅니다.
 if (!isset($_SESSION['user_id'])) {
     header("Location: html/login.html");

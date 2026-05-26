@@ -75,12 +75,6 @@ switch ($action) {
         if (mysqli_num_rows($check_res) == 0) {
             $sql = "INSERT INTO friends (user_id, friend_id, status) VALUES ($my_id, $target_id, 'pending')";
             if (mysqli_query($conn, $sql)) {
-                include_once 'fcm_v1_send.php';
-                $target = mysqli_fetch_assoc(mysqli_query($conn, "SELECT fcm_token FROM users WHERE user_id = $target_id"));
-                $me = mysqli_fetch_assoc(mysqli_query($conn, "SELECT username FROM users WHERE user_id = $my_id"));
-                if (!empty($target['fcm_token'])) {
-                    sendFCMV1($target['fcm_token'], "친구 요청", "{$me['username']}님이 친구 신청을 보냈어요!");
-                }
                 echo json_encode(["success" => true]);
             }
         } else { echo json_encode(["success" => true, "message" => "이미 신청함"]); }
@@ -91,15 +85,10 @@ switch ($action) {
         $f_id = (int)($data['friendship_id'] ?? 0);
         if ($f_id === 0) { echo json_encode(["success" => false, "message" => "ID 없음"]); break; }
         
-        $find_res = mysqli_query($conn, "SELECT f.user_id as sender_id, u.fcm_token FROM friends f JOIN users u ON f.user_id = u.user_id WHERE f.friendship_id = $f_id");
+        $find_res = mysqli_query($conn, "SELECT f.user_id as sender_id FROM friends f JOIN users u ON f.user_id = u.user_id WHERE f.friendship_id = $f_id");
         $target_data = mysqli_fetch_assoc($find_res);
         
         if (mysqli_query($conn, "UPDATE friends SET status = 'accepted' WHERE friendship_id = $f_id")) {
-            include_once 'fcm_v1_send.php';
-            $me = mysqli_fetch_assoc(mysqli_query($conn, "SELECT username FROM users WHERE user_id = $my_id"));
-            if ($target_data && !empty($target_data['fcm_token'])) {
-                sendFCMV1($target_data['fcm_token'], "친구 수락", "{$me['username']}님이 친구 요청을 수락했어요.");
-            }
             echo json_encode(["success" => true]);
         } else { echo json_encode(["success" => false]); }
         break;
@@ -114,25 +103,10 @@ switch ($action) {
 
         if (mysqli_query($conn, "INSERT INTO club_groups (group_name) VALUES ('$g_name')")) {
             $new_group_id = mysqli_insert_id($conn);
-            include_once 'fcm_v1_send.php';
-            $me = mysqli_fetch_assoc(mysqli_query($conn, "SELECT username, fcm_token FROM users WHERE user_id = $my_id"));
-
-            // 방장(본인)에게 그룹 생성 완료 알림
-            if (!empty($me['fcm_token'])) {
-                sendFCMV1($me['fcm_token'], "그룹 생성", "[{$g_name}] 그룹이 생성되었습니다!");
-            }
 
             foreach ($members as $m_id) {
                 $role = ((int)$m_id == $my_id) ? 'admin' : 'member';
                 mysqli_query($conn, "INSERT INTO group_members (group_id, user_id, role) VALUES ($new_group_id, $m_id, '$role')");
-                
-                // 초대받은 멤버들에게 알림 발송
-                if ((int)$m_id != $my_id) {
-                    $target = mysqli_fetch_assoc(mysqli_query($conn, "SELECT fcm_token FROM users WHERE user_id = $m_id"));
-                    if (!empty($target['fcm_token'])) {
-                        sendFCMV1($target['fcm_token'], "그룹 초대", "'[{$g_name}]' 그룹에 초대되었습니다!");
-                    }
-                }
             }
             ob_clean();
             echo json_encode(["success" => true]);
@@ -197,12 +171,12 @@ switch ($action) {
         }
 
         $group_filter = "";
-        // 👇 [핵심 수정] 내 방(0)일 때는 방 이름을 가져옵니다.
+        // 내 방(0)일 때는 방 이름을 가져옵니다.
         $group_name_select = "IFNULL(cg.group_name, '내 방')";
 
         if ($current_group_id > 0) {
             $group_filter = " AND c.group_id = $current_group_id ";
-            // 👇 [핵심 수정] 특정 그룹 방일 때는 방 이름을 NULL로 비워버립니다!
+            // 특정 그룹 방일 때는 방 이름을 NULL로 비워버립니다.
             $group_name_select = "NULL"; 
         }
 
@@ -236,7 +210,7 @@ switch ($action) {
             break; 
         }
 
-        // 👇 [추가] 현재 작성자가 위치한 방(그룹) ID 가져오기
+        // 현재 작성자가 위치한 방(그룹) ID 가져오기
         $user_info_res = mysqli_query($conn, "SELECT main_group_id FROM users WHERE user_id = $my_id");
         $user_info = mysqli_fetch_assoc($user_info_res);
         $current_group_id = $user_info['main_group_id'] ? (int)$user_info['main_group_id'] : 0;
@@ -266,7 +240,7 @@ switch ($action) {
 
         $safe_content = mysqli_real_escape_string($conn, $content);
         
-        // 👇 [수정] INSERT 문에 group_id 값($current_group_id)을 함께 저장합니다!
+        // INSERT 문에 group_id 값($current_group_id)을 함께 저장합니다.
         $sql = "INSERT INTO song_comments (song_id, user_id, group_id, content) 
                 VALUES ($song_id, $my_id, $current_group_id, '$safe_content')";
                 

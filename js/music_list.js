@@ -1,7 +1,30 @@
 let currentDate = new Date();
 currentDate.setHours(0, 0, 0, 0);
 
-document.addEventListener("DOMContentLoaded", () => {
+// 콜백 함수에 async를 붙여줍니다.
+document.addEventListener("DOMContentLoaded", async () => {
+    
+    // 🚨 1. 페이지가 켜지자마자 오늘 노래를 등록했는지 서버에 물어봅니다.
+    try {
+        const checkRes = await fetch('../php/api.php?action=check_today_recommend');
+        const checkData = await checkRes.json();
+        
+        // 권한이 없으면 로그인으로
+        if (checkData.error === "Unauthorized") {
+            window.location.replace("login.html");
+            return;
+        }
+        
+        // ✅ 오늘 등록을 안 했다면 강제로 메인 페이지로 튕겨냅니다.
+        if (!checkData.already_done) {
+            window.location.replace("main.html"); // replace를 쓰면 뒤로가기 버튼도 먹히지 않습니다.
+            return;
+        }
+    } catch (e) {
+        console.error("접근 권한 확인 실패:", e);
+    }
+
+    // 2. 노래를 등록한 착한 유저라면 기존 코드를 정상적으로 실행합니다.
     updateDateDisplay();
     setupDateNavigation();
     setupEventListeners();

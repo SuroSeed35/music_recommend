@@ -66,21 +66,6 @@ urlInput.addEventListener("input", () => {
     }
 });
 
-/**
- * 🟢 안드로이드 네이티브 코드에서 이 함수를 호출하여 토큰을 넘겨줍니다 🟢
- */
-function receiveTokenFromAndroid(token) {
-    const formData = new FormData();
-    formData.append('fcm_token', token);
-
-    fetch('../php/update_token.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.text())
-    .then(result => console.log('안드로이드 토큰 업데이트 완료:', result))
-    .catch(error => console.error('토큰 업데이트 실패:', error));
-}
 
 /**
  * 유튜브 API를 통해 영상 제목을 가져옵니다.
@@ -123,7 +108,7 @@ actionBtn.onclick = async (e) => {
     formData.append('url', urlInput.value.trim());
     formData.append('comment', comment);
     formData.append('title', info.title);
-    formData.append('thumb', `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`);
+    formData.append('thumb', mainImage.src);
 
     // ⏱️ 4초 안에 응답이 없으면 요청을 중단시키는 장치
     const controller = new AbortController();
@@ -132,10 +117,10 @@ actionBtn.onclick = async (e) => {
     fetch('../php/save_song.php', {
         method: 'POST',
         body: formData,
-        signal: controller.signal   // 타임아웃 연결
+        signal: controller.signal
     })
     .then(async response => {
-        clearTimeout(timeoutId);     // 응답 왔으면 타이머 해제
+        clearTimeout(timeoutId);
         const text = await response.text(); 
         try {
             return JSON.parse(text); 
@@ -145,7 +130,8 @@ actionBtn.onclick = async (e) => {
     })
     .then(result => {
         if (result.success) {
-            window.location.href = "music_list.html"; 
+            // ✅ 성공 시 랜덤 덕담 띄우기 함수 호출
+            showFullScreenGreetingAndRedirect("music_list.html"); 
         } else {
             alert(result.message);
             actionBtn.innerText = "이 노래로 추천하기";
@@ -154,9 +140,9 @@ actionBtn.onclick = async (e) => {
     })
     .catch(error => {
         clearTimeout(timeoutId);
-        // ⏱️ 타임아웃(abort)으로 끊긴 경우: 저장 자체는 이미 됐으므로 그냥 이동
         if (error.name === 'AbortError') {
-            window.location.href = "music_list.html";
+            // ✅ 타임아웃 방어 시에도 랜덤 덕담 띄우기 함수 호출
+            showFullScreenGreetingAndRedirect("music_list.html"); 
             return;
         }
         console.error('상세 에러:', error);
@@ -167,7 +153,6 @@ actionBtn.onclick = async (e) => {
 };
 
 // --- 글자 수 실시간 카운팅 기능 ---
-// --- 글자 수 실시간 카운팅 및 강제 제한 기능 ---
 const charCountDisplay = document.getElementById("char-count");
 
 if (commentInput && charCountDisplay) {
@@ -193,74 +178,34 @@ if (commentInput && charCountDisplay) {
     });
 }
 
-// ==========================================
-// [1단계] 웹 브라우저 푸시 알림 권한 및 토큰 발급
-// ==========================================
+/**
+ * 🍞 랜덤 덕담 풀스크린 애니메이션 후 이동하는 함수
+ */
+function showFullScreenGreetingAndRedirect(url) {
+    const greetings = [
+        "오늘도 멋진 하루가 될 거예요!",
+        "당신의 하루를 진심으로 응원합니다!",
+        "행복이 가득한 하루 보내세요!",
+        "수고했어요, 오늘도!",
+        "좋은 음악과 함께 활기찬 하루!",
+        "오늘 하루도 반짝반짝 빛날 거예요!",
+        "기분 좋은 일만 가득하길 바라요!",
+        "당신의 추천이 누군가에겐 큰 기쁨이 됩니다 🎧",
+        "오늘도 무사히, 그리고 행복하게!",
+        "당신의 음악 취향, 정말 멋져요!"
+    ];
 
-// 1. 파이어베이스 환경 설정 (콘솔 -> 프로젝트 설정 -> 일반 탭 하단 내 앱에서 확인 가능)
-const firebaseConfig = {
-    apiKey: "AIzaSyBD61ToNb3GEgNKRw_-IUN97Z4fCoDiYK8",
-    authDomain: "musicrecommend-c0498.firebaseapp.com",
-    projectId: "musicrecommend-c0498",
-    storageBucket: "musicrecommend-c0498.appspot.com",
-    messagingSenderId: "20112939467",
-    appId: "1:20112939467:web:dc417a49069b1c402e7e4e"
-};
+    const randomMsg = greetings[Math.floor(Math.random() * greetings.length)];
 
-// 파이어베이스 초기화 (이미 초기화되지 않았을 때만)
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
+    document.body.innerHTML = `
+    <div style="display:flex; justify-content:center; align-items:center; height:100vh; background:#fff; font-family:'Pretendard', sans-serif;">
+        <div style="font-size:35px; font-weight:600; color:#333; animation: fadeOut 1.5s forwards; text-align: center; line-height: 1.5; word-break: keep-all;">
+            ${randomMsg}
+        </div>
+    </div>
+    <style>@keyframes fadeOut { 0%{opacity:0; transform:translateY(10px);} 20%{opacity:1; transform:translateY(0);} 80%{opacity:1;} 100%{opacity:0;} }</style>`;
+    
+    setTimeout(() => { 
+        window.location.replace(url); 
+    }, 1300);
 }
-const messaging = firebase.messaging();
-
-// 2. 알림 권한 요청 및 토큰 발급 함수
-function requestWebNotificationPermission() {
-    console.log("알림 권한을 요청합니다...");
-
-    Notification.requestPermission().then((permission) => {
-        if (permission === 'granted') {
-            console.log("알림 권한이 허용되었습니다!");
-            
-            // ⭐️ 여기에 아까 발급받은 VAPID KEY를 넣으세요 ⭐️
-            const vapidKey = "BLCD3S1nUVHykSOT-RWV0gbfJlb4JphfTfMWSH5Qa-zHtoKVdxZ5a6hF-qQfT8wdkm-Pi3AjZt-2OuoFEA1MgG4"; 
-
-            messaging.getToken({ vapidKey: vapidKey })
-                .then((currentToken) => {
-                    if (currentToken) {
-                        console.log("웹 FCM 토큰 발급 성공:", currentToken);
-                        
-                        // 서버 DB에 토큰 저장 (기존에 만들어두신 API 활용)
-                        saveTokenToServer(currentToken);
-                    } else {
-                        console.log("토큰을 가져올 수 없습니다. 등록을 확인하세요.");
-                    }
-                }).catch((err) => {
-                    console.log("토큰 가져오기 에러:", err);
-                });
-        } else {
-            console.log("사용자가 알림 권한을 거부했습니다.");
-        }
-    });
-}
-
-// 3. 서버로 토큰을 전송하는 함수 (기존 receiveTokenFromAndroid와 거의 동일)
-function saveTokenToServer(token) {
-    const formData = new FormData();
-    formData.append('fcm_token', token);
-
-    fetch('../php/update_token.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.text())
-    .then(result => console.log('웹 토큰 DB 저장 완료:', result))
-    .catch(error => console.error('웹 토큰 저장 실패:', error));
-}
-
-// 4. 페이지가 로드될 때 알림 권한을 한 번 물어보도록 실행
-document.addEventListener('DOMContentLoaded', () => {
-    // 브라우저가 알림을 지원하는지 확인 후 실행
-    if ('Notification' in window) {
-        requestWebNotificationPermission();
-    }
-});
