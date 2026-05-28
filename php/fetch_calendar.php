@@ -14,12 +14,13 @@ $group_id = (int)(isset($_GET['group_id']) ? $_GET['group_id'] : 0);
 
 header('Content-Type: application/json');
 
-// 그룹 ID에 따른 조건 설정[cite: 1, 4]
+// 그룹 ID에 따른 조건 설정
 $user_cond = ($group_id === 0) 
     ? "s.user_id = $my_id" 
     : "s.user_id IN (SELECT user_id FROM group_members WHERE group_id = $group_id)";
 
-$sql = "SELECT u.username, u.login_id, s.daily_comment, s.title, s.thumbnail_img, s.youtube_url, s.log_date, s.created_at 
+// 1. SELECT 문에 s.song_id 추가
+$sql = "SELECT s.song_id, u.username, u.login_id, s.daily_comment, s.title, s.thumbnail_img, s.youtube_url, s.log_date, s.created_at 
         FROM songs s 
         JOIN users u ON s.user_id = u.user_id 
         WHERE YEAR(s.log_date) = $year 
@@ -32,16 +33,18 @@ $songs = [];
 
 if ($result) {
     while($row = $result->fetch_assoc()) {
-        // 1. created_at 시간을 타임스탬프로 변환
+        // created_at 시간을 타임스탬프로 변환
         $timestamp = strtotime($row['created_at']); 
 
-        // 2. 오전/오후 판별 (date('A')는 AM 또는 PM을 반환함)
+        // 오전/오후 판별 (date('A')는 AM 또는 PM을 반환함)
         $ampm = (date('A', $timestamp) === 'AM') ? '오전' : '오후'; 
 
-        // 3. 12시간 형식의 시:분 생성 (g는 0이 붙지 않는 12시간 형식)
+        // 12시간 형식의 시:분 생성 (g는 0이 붙지 않는 12시간 형식)
         $time12 = date('g:i', $timestamp); 
 
         $songs[] = [
+            // 2. songId를 배열에 추가 (모아듣기 플레이어 연동용)
+            "songId" => $row['song_id'], 
             "uploadDate" => str_replace('-', '.', $row['log_date']),
             "userName" => $row['username'],
             "loginId" => $row['login_id'],

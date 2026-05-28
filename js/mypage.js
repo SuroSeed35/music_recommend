@@ -23,6 +23,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    if (typeof PlayAll !== 'undefined') PlayAll.init();
+
     if (logoutCancelBtn) {
         // 2. 모달에서 '취소' 클릭 시 -> 모달 닫기
         logoutCancelBtn.addEventListener('click', () => {
@@ -479,3 +481,381 @@ function loadSongForDate(dateObj) {
         .catch(err => console.error("날짜별 노래 로드 에러:", err));
 }
 
+async function fetchPlayedSongs() {
+    try {
+        const response = await fetch('../php/api.php?action=get_played_history'); 
+        if (!response.ok) return [];
+        const text = await response.text();
+        return text ? (JSON.parse(text).playedSongs || []) : []; 
+    } catch (error) { return []; }
+}
+async function savePlayedSong(songId) {
+    try {
+        const response = await fetch('../php/api.php?action=save_played_history', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ song_id: songId })
+        });
+        if (response.ok) {
+            // 음악 리스트 화면에서의 체크마크 동기화
+            const songCard = document.querySelector(`.song-card[data-song-id="${songId}"]`);
+            if (songCard) {
+                songCard.classList.add('played');
+                const mark = songCard.querySelector('.complete-mark');
+                if (mark) mark.style.display = 'flex';
+            }
+        }
+    } catch (error) {}
+}
+
+// ============================================================
+// 🔥 공통 플로팅 미니 플레이어 & 전체 재생 모듈 (페이지 간 상태 유지 & 중복 재생 방지)
+// ============================================================
+const PlayAll = (() => {
+    let player = null, apiReady = false, pendingStart = false;
+    let pendingTime = 0, pendingAutoplay = false;
+    let queue = [];      // 현재 진짜로 재생 중인 플레이어 큐
+    let pageQueue = [];  // 현재 보고 있는 화면(페이지)의 노래 큐
+    let currentIndex = -1, isPlaying = false, isExpanded = false;
+    let playedSongIds = new Set();
+    let isFloating = false;
+    let $playAllBtn, $miniPlayer, $title, $sub, $thumb, $prev, $next, $playPause, $playPauseIcon, $queueList;
+    let isDragging = false, dragStartX = 0, dragStartY = 0, initialLeft = 0, initialTop = 0;
+    let isFloating = false;
+
+    function extractYouTubeID(url) {
+        const match = url ? url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i) : null;
+        return (match && match[1].length === 11) ? match[1] : null;
+    }
+
+    // 🔥 공통 토스트 알림 (모든 페이지 호환용)
+    function showToastSafe(msg) {
+        if (typeof showToast === 'function') {
+            showToast(msg);
+        } else {
+            const toast = document.createElement('div');
+            toast.innerText = msg;
+            toast.style.cssText = `
+                position: fixed; bottom: 120px; left: 50%; transform: translateX(-50%);
+                background-color: rgba(0, 0, 0, 0.75); color: #fff; padding: 12px 24px;
+                border-radius: 25px; font-size: 14px; font-weight: 500; z-index: 10000;
+                opacity: 0; transition: opacity 0.3s ease-in-out; pointer-events: none; text-align: center;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            `;
+            document.body.appendChild(toast);
+            requestAnimationFrame(() => toast.style.opacity = '1');
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => document.body.removeChild(toast), 300);
+            }, 2000);
+        }
+    }
+
+    function saveState() {
+        if (queue.length === 0) return;
+        const state = {
+            queue, currentIndex,
+            playedSongIds: Array.from(playedSongIds),
+            currentTime: player && typeof player.getCurrentTime === 'function' ? player.getCurrentTime() : 0,
+            isPlaying, isExpanded
+        };
+        sessionStorage.setItem('miniPlayerState', JSON.stringify(state));
+    }
+    window.addEventListener('beforeunload', saveState);
+
+    function restoreState() {
+        const stateStr = sessionStorage.getItem('miniPlayerState');
+        if (!stateStr) return;
+        try {
+            const state = JSON.parse(stateStr);
+            if (state && state.queue && state.queue.length > 0) {
+                queue = state.queue;
+                currentIndex = state.currentIndex;
+                playedSongIds = new Set(state.playedSongIds || []);
+                isExpanded = state.isExpanded;
+                pendingTime = state.currentTime || 0;
+                pendingAutoplay = state.isPlaying || false;
+
+                $miniPlayer.classList.add('show');
+                $miniPlayer.setAttribute('aria-hidden', 'false');
+                $miniPlayer.removeAttribute('inert');
+
+                if (isExpanded) {
+                    $miniPlayer.style.transition = 'none';
+                    $miniPlayer.classList.add('expanded');
+                    setTimeout(() => { $miniPlayer.style.transition = ''; }, 50);
+                    renderQueueList();
+                }
+                renderMiniPlayer();
+                setPlayingUI(pendingAutoplay);
+                pendingStart = true;
+            }
+        } catch(e) {}
+    }
+
+    window.onYouTubeIframeAPIReady = function() {
+        apiReady = true;
+        try {
+            player = new YT.Player('yt-player', {
+                height: '100%', width: '100%',
+                playerVars: { autoplay: 0, controls: 1, playsinline: 1 },
+                events: {
+                    onReady: () => { 
+                        if (pendingStart && queue.length > 0) { 
+                            pendingStart = false; 
+                            if (pendingTime > 0) {
+                                player.cueVideoById(queue[currentIndex].videoId, pendingTime);
+                                if (pendingAutoplay) setTimeout(() => { try { player.playVideo(); } catch(e){} }, 300);
+                                pendingTime = 0;
+                            } else {
+                                playAt(currentIndex >= 0 ? currentIndex : 0); 
+                            }
+                        } 
+                    },
+                    onStateChange: (e) => {
+                        if (e.data === YT.PlayerState.PLAYING) setPlayingUI(true);
+                        else if (e.data === YT.PlayerState.PAUSED) setPlayingUI(false);
+                        else if (e.data === YT.PlayerState.ENDED) {
+                            if (queue[currentIndex]) {
+                                // savePlayedSong 함수는 외부에 선언되어 있어야 함
+                                if (typeof savePlayedSong === 'function') savePlayedSong(queue[currentIndex].songId);
+                                playedSongIds.add(queue[currentIndex].songId);
+                            }
+                            currentIndex < queue.length - 1 ? playAt(currentIndex + 1) : stopAll();
+                        }
+                    }
+                }
+            });
+        } catch (e) {}
+    };
+
+    function syncQueue(songs, pSongs = []) {
+        playedSongIds = new Set(pSongs);
+        pageQueue = (songs || []).map(s => ({
+            songId: s.song_id || s.songId, 
+            videoId: extractYouTubeID(s.youtube_url || s.url),
+            title: s.title || s.videoTitle || '제목 없음', 
+            thumb: s.thumbnail_img || s.thumb || '', 
+            loginId: s.login_id || s.loginId || s.username
+        })).filter(item => item.videoId);
+        
+        if ($playAllBtn) $playAllBtn.disabled = (pageQueue.length === 0);
+        saveState(); 
+    }
+
+    function startPlayAll(forcePlay = false) {
+        if (forcePlay) {
+            if (pageQueue.length === 0) {
+                showToastSafe('노래가 없습니다.');
+                return;
+            }
+            
+            // 🔥 이미 재생 중인(혹은 일시정지 중인) 리스트가 있다면 덮어쓰지 않고 경고창 표시
+            if (queue.length > 0) {
+                showToastSafe('삭제하고 다시 시도해주세요');
+                return;
+            }
+
+            queue = [...pageQueue];
+            currentIndex = 0;
+            saveState();
+        }
+
+        if (queue.length === 0) return;
+        
+        if (!forcePlay && $miniPlayer && $miniPlayer.classList.contains('show')) { 
+            toggleExpand(); 
+            return; 
+        }
+        
+        $miniPlayer.classList.add('show');
+        $miniPlayer.setAttribute('aria-hidden', 'false');
+        $miniPlayer.removeAttribute('inert');
+
+        if (!apiReady || !player || typeof player.loadVideoById !== 'function') {
+            pendingStart = true; pendingTime = 0; renderMiniPlayer(); setPlayingUI(true); return;
+        }
+        playAt(forcePlay ? 0 : currentIndex);
+    }
+
+    function playAt(index) {
+        if (index < 0 || index >= queue.length) return;
+        currentIndex = index; renderMiniPlayer(); renderQueueList();
+        if (!player || typeof player.cueVideoById !== 'function') { pendingStart = true; return; }
+        try {
+            player.cueVideoById(queue[currentIndex].videoId);
+            setTimeout(() => { try { player.playVideo(); } catch(e){} }, 300);
+        } catch (e) {}
+    }
+
+    function stopAll() {
+        try { player && player.stopVideo(); } catch (e) {}
+        isPlaying = false; currentIndex = -1; queue = [];
+        isFloating = false; // 🔥 플로팅 초기화 추가
+        sessionStorage.removeItem('miniPlayerState');
+        if ($miniPlayer) {
+            isExpanded = false;
+            $miniPlayer.classList.remove('expanded', 'show', 'floating-mode');
+            $miniPlayer.setAttribute('aria-hidden', 'true');
+            $miniPlayer.setAttribute('inert', '');
+            $miniPlayer.style.transform = 'translate(-50%, 0)';
+            $miniPlayer.style.left = ''; 
+            $miniPlayer.style.top = ''; 
+        }
+    }
+
+    function toggleExpand() {
+        isExpanded = !isExpanded;
+        if (isExpanded) {
+            $miniPlayer.style.left = ''; $miniPlayer.style.top = ''; $miniPlayer.style.transform = '';
+            requestAnimationFrame(() => $miniPlayer.classList.add('expanded'));
+            renderQueueList();
+        } else {
+            $miniPlayer.classList.remove('expanded');
+        }
+    }
+
+    function renderMiniPlayer() {
+        const item = queue[currentIndex];
+        if (!item) return;
+        if ($title) $title.textContent = item.title;
+        if ($sub) $sub.textContent = `@${item.loginId} · ${currentIndex + 1} / ${queue.length}`;
+        if ($thumb) $thumb.src = item.thumb;
+        if ($prev) $prev.disabled = (currentIndex <= 0);
+        if ($next) $next.disabled = (currentIndex >= queue.length - 1);
+    }
+
+    function renderQueueList() {
+        if (!$queueList || !isExpanded) return;
+        $queueList.innerHTML = '';
+        queue.forEach((item, index) => {
+            const isPlayed = playedSongIds.has(item.songId);
+            const qItem = document.createElement('div');
+            qItem.className = `q-item ${isPlayed ? 'played' : ''} ${index === currentIndex ? 'current' : ''}`;
+            qItem.innerHTML = `<div class="q-thumb"><img src="${item.thumb}" alt=""></div>
+                <div class="q-info">
+                    <div class="q-title">${isPlayed ? '<span class="q-label-played">재생 완료</span>' : ''}${item.title}</div>
+                    <div class="q-user">@${item.loginId}</div>
+                </div>`;
+            qItem.onclick = () => playAt(index);
+            $queueList.appendChild(qItem);
+        });
+        const currentEl = $queueList.querySelector('.current');
+        if (currentEl) currentEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function setPlayingUI(playing) {
+        isPlaying = playing;
+        if ($playPauseIcon) $playPauseIcon.className = playing ? 'fas fa-pause' : 'fas fa-play';
+    }
+
+    function onDragStart(e) {
+        if (e.target.closest('.mp-btn') || isExpanded) { if(isExpanded) toggleExpand(); return; }
+        const touch = e.touches ? e.touches[0] : e;
+        dragStartX = touch.clientX; dragStartY = touch.clientY; isDragging = false;
+        
+        const rect = $miniPlayer.getBoundingClientRect();
+        if ($miniPlayer.style.transform !== 'none') {
+            $miniPlayer.style.transform = 'none'; $miniPlayer.style.left = rect.left + 'px'; $miniPlayer.style.top = rect.top + 'px';
+        }
+        initialLeft = parseFloat($miniPlayer.style.left) || rect.left;
+        initialTop = parseFloat($miniPlayer.style.top) || rect.top;
+        
+        document.addEventListener(e.type === 'touchstart' ? 'touchmove' : 'mousemove', onDragMove, {passive: false});
+        document.addEventListener(e.type === 'touchstart' ? 'touchend' : 'mouseup', onDragEnd);
+    }
+    function onDragMove(e) {
+        const touch = e.touches ? e.touches[0] : e;
+        const dx = touch.clientX - dragStartX; 
+        const dy = touch.clientY - dragStartY;
+        
+        if (!isDragging && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
+            isDragging = true;
+            if (!isFloating) {
+                isFloating = true;
+                $miniPlayer.classList.add('floating-mode');
+                
+                dragStartX = touch.clientX;
+                dragStartY = touch.clientY;
+                initialLeft = touch.clientX - 32;
+                initialTop = touch.clientY - 32;
+            }
+        }
+        
+        if (isDragging) { 
+            e.preventDefault(); 
+            const currentDx = touch.clientX - dragStartX;
+            const currentDy = touch.clientY - dragStartY;
+            $miniPlayer.style.left = `${initialLeft + currentDx}px`; 
+            $miniPlayer.style.top = `${initialTop + currentDy}px`; 
+        }
+    }
+
+    function onDragEnd(e) {
+        document.removeEventListener(e.type === 'touchend' ? 'touchmove' : 'mousemove', onDragMove);
+        document.removeEventListener(e.type === 'touchend' ? 'touchend' : 'mouseup', onDragEnd);
+        
+        if (!isDragging) {
+            if (isFloating) {
+                isFloating = false;
+                $miniPlayer.classList.remove('floating-mode');
+                $miniPlayer.style.left = ''; 
+                $miniPlayer.style.top = ''; 
+                $miniPlayer.style.transform = '';
+            } else {
+                toggleExpand();
+            }
+        }
+        isDragging = false;
+    }
+
+    function stopAll() {
+        try { player && player.stopVideo(); } catch (e) {}
+        isPlaying = false; currentIndex = -1; queue = [];
+        isFloating = false; // 🔥 재생 중지 시 플로팅 상태도 초기화
+        sessionStorage.removeItem('miniPlayerState');
+        if ($miniPlayer) {
+            isExpanded = false;
+            $miniPlayer.classList.remove('expanded', 'show', 'floating-mode');
+            $miniPlayer.setAttribute('aria-hidden', 'true');
+            $miniPlayer.setAttribute('inert', '');
+            $miniPlayer.style.transform = 'translate(-50%, 0)';
+            $miniPlayer.style.left = ''; 
+            $miniPlayer.style.top = ''; 
+        }
+    }
+    function onDragEnd(e) {
+        document.removeEventListener(e.type === 'touchend' ? 'touchmove' : 'mousemove', onDragMove);
+        document.removeEventListener(e.type === 'touchend' ? 'touchend' : 'mouseup', onDragEnd);
+        if (!isDragging) toggleExpand();
+        isDragging = false;
+    }
+
+    function init() {
+        $playAllBtn = document.getElementById('play-all-btn');
+        $miniPlayer = document.getElementById('miniPlayer');
+        $queueList = document.getElementById('mpQueueList');
+        $thumb = document.getElementById('miniPlayerThumb');
+        $title = document.getElementById('miniPlayerTitle'); $sub = document.getElementById('miniPlayerSub');
+        $prev = document.getElementById('mpPrevBtn'); $next = document.getElementById('mpNextBtn');
+        $playPause = document.getElementById('mpPlayPauseBtn'); $playPauseIcon = document.getElementById('mpPlayPauseIcon');
+        $close = document.getElementById('mpCloseBtn');
+
+        if ($playAllBtn) $playAllBtn.onclick = () => startPlayAll(true);
+        
+        if ($prev) $prev.onclick = () => currentIndex > 0 ? playAt(currentIndex - 1) : (player && typeof player.seekTo === 'function' && player.seekTo(0, true));
+        if ($next) $next.onclick = () => currentIndex < queue.length - 1 ? playAt(currentIndex + 1) : stopAll();
+        if ($playPause) $playPause.onclick = () => player && (player.getPlayerState() === YT.PlayerState.PLAYING ? player.pauseVideo() : player.playVideo());
+        if ($close) $close.onclick = stopAll;
+
+        const $mpHeader = document.getElementById('mpHeader');
+        if ($mpHeader) {
+            $mpHeader.addEventListener('mousedown', onDragStart);
+            $mpHeader.addEventListener('touchstart', onDragStart, {passive: true});
+        }
+        
+        restoreState();
+    }
+
+    return { init, syncQueue, startPlayAll };
+})();

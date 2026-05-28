@@ -3,16 +3,184 @@ let currentMonthSongs = []; // DB에서 가져온 이번 달 노래들을 저장
 let selectedGroupId = 0; // 🔥 선택된 그룹 ID 기본값을 0(나)으로 설정
 let selectedDateStr = null;
 
+let isPlayAllMode = false;
+
+document.addEventListener("DOMContentLoaded", () => {
+    // 플레이어 초기화
+    if (typeof PlayAll !== 'undefined') PlayAll.init();
+
+    const playAllSwitch = document.getElementById('playAllSwitch');
+    const playAllLabel = document.getElementById('playAllLabel');
+    const playSelectedBtn = document.getElementById('playSelectedBtn');
+    
+    const periodModal = document.getElementById('periodModalOverlay');
+    const periodCancelBtn = document.getElementById('periodCancelBtn');
+    const periodPlayBtn = document.getElementById('periodPlayBtn');
+    
+    const periodStartDateInput = document.getElementById('periodStartDate');
+    const periodEndDateInput = document.getElementById('periodEndDate');
+    const periodPreviewList = document.getElementById('periodPreviewList');
+
+    // 1. 스위치 토글 이벤트
+    if (playAllSwitch) {
+        playAllSwitch.addEventListener('change', (e) => {
+            isPlayAllMode = e.target.checked;
+            playAllLabel.innerText = isPlayAllMode ? '기간 전체 듣기' : '날짜별 듣기';
+        });
+    }
+
+    // 2. 모아듣기 버튼 클릭
+    if (playSelectedBtn) {
+        playSelectedBtn.addEventListener('click', async () => {
+            if (!isPlayAllMode) {
+                // [스위치 OFF] 선택된 날짜만 재생
+                if (!selectedDateStr) {
+                    alert("재생할 날짜를 먼저 캘린더에서 선택해주세요.");
+                    return;
+                }
+                const todaysSongs = currentMonthSongs.filter(s => s.uploadDate === selectedDateStr);
+                if (todaysSongs.length === 0) {
+                    alert("선택하신 날짜에 재생할 노래가 없습니다.");
+                    return;
+                }
+                
+                const mappedSongs = todaysSongs.map(s => ({
+                    song_id: s.songId,
+                    youtube_url: s.url,
+                    title: s.videoTitle,
+                    thumbnail_img: s.thumb,
+                    username: s.userName,
+                    login_id: s.loginId
+                }));
+                
+                const playedSongs = await fetchPlayedSongs();
+                PlayAll.syncQueue(mappedSongs, playedSongs);
+                PlayAll.startPlayAll(true); // 🔥 true 추가: 무조건 재생(교체)
+            } else {
+                // [스위치 ON] 기간 선택 모달 띄우기
+                if (periodModal) {
+                    periodModal.style.display = 'flex';
+                    if (periodPreviewList) {
+                        periodPreviewList.style.display = 'none';
+                        periodPreviewList.innerHTML = '';
+                    }
+                }
+            }
+        });
+    }
+
+    // 3. 모달 - 취소 버튼
+    if (periodCancelBtn) {
+        periodCancelBtn.addEventListener('click', () => {
+            periodModal.style.display = 'none';
+        });
+    }
+
+    // 🔥 미리보기 리스트 로드 기능
+    const loadPreviewSongs = async () => {
+        const startVal = periodStartDateInput.value;
+        const endVal = periodEndDateInput.value;
+
+        if (!startVal || !endVal) {
+            if(periodPreviewList) periodPreviewList.style.display = 'none';
+            return;
+        }
+
+        const startDate = startVal.replace(/-/g, '.');
+        const endDate = endVal.replace(/-/g, '.');
+
+        if (startDate > endDate) {
+            if(periodPreviewList) {
+                periodPreviewList.style.display = 'block';
+                periodPreviewList.innerHTML = '<div style="text-align:center; color:#ff4d4f; font-size:13px; padding:20px 0;">시작일이 종료일보다 늦을 수 없습니다.</div>';
+            }
+            return;
+        }
+
+        if(periodPreviewList) {
+            periodPreviewList.style.display = 'block';
+            periodPreviewList.innerHTML = '<div style="text-align:center; color:#888; font-size:13px; padding:20px 0;">노래를 불러오는 중...</div>';
+        }
+
+        try {
+            const url = `../php/fetch_period_songs.php?group_id=${selectedGroupId}&start=${startDate}&end=${endDate}`;
+            const res = await fetch(url);
+            const data = await res.json();
+            const periodSongs = data.songs || data;
+
+            if (!Array.isArray(periodSongs) || periodSongs.length === 0) {
+                if(periodPreviewList) periodPreviewList.innerHTML = '<div style="text-align:center; color:#888; font-size:13px; padding:20px 0;">해당 기간에 추천된 노래가 없습니다.</div>';
+                return;
+            }
+
+            if(periodPreviewList) {
+                periodPreviewList.innerHTML = '';
+                periodSongs.forEach(song => {
+                    const item = document.createElement('div');
+                    item.style.cssText = 'display: flex; align-items: center; gap: 10px; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #f0f0f0;';
+                    item.innerHTML = `
+                        <div style="width: 45px; height: 45px; border-radius: 6px; overflow: hidden; flex-shrink: 0; background: #eee;">
+                            <img src="${song.thumbnail_img || song.thumb}" style="width: 100%; height: 100%; object-fit: cover;">
+                        </div>
+                        <div style="display: flex; flex-direction: column; overflow: hidden;">
+                            <span style="font-size: 13px; font-weight: 700; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${song.title || song.videoTitle}</span>
+                            <span style="font-size: 11px; color: #888;">@${song.login_id || song.loginId} · ${song.log_date || song.uploadDate}</span>
+                        </div>
+                    `;
+                    periodPreviewList.appendChild(item);
+                });
+            }
+        } catch (err) {
+            console.error(err);
+            if(periodPreviewList) periodPreviewList.innerHTML = '<div style="text-align:center; color:#ff4d4f; font-size:13px; padding:20px 0;">노래를 불러오는데 실패했습니다.</div>';
+        }
+    };
+
+    if (periodStartDateInput) periodStartDateInput.addEventListener('change', loadPreviewSongs);
+    if (periodEndDateInput) periodEndDateInput.addEventListener('change', loadPreviewSongs);
+
+    // 4. 모달 - 기간 선택 후 재생 버튼
+    if (periodPlayBtn) {
+        periodPlayBtn.addEventListener('click', async () => {
+            const startDate = periodStartDateInput.value.replace(/-/g, '.');
+            const endDate = periodEndDateInput.value.replace(/-/g, '.');
+
+            if (!startDate || !endDate) {
+                alert("시작일과 종료일을 모두 선택해주세요.");
+                return;
+            }
+
+            try {
+                const url = `../php/fetch_period_songs.php?group_id=${selectedGroupId}&start=${startDate}&end=${endDate}`;
+                const res = await fetch(url);
+                const data = await res.json();
+
+                const periodSongs = data.songs || data;
+
+                if (!Array.isArray(periodSongs) || periodSongs.length === 0) {
+                    alert("선택한 기간 내에 추천된 노래가 없습니다.");
+                    return;
+                }
+
+                periodModal.style.display = 'none';
+                
+                const playedSongs = await fetchPlayedSongs();
+                PlayAll.syncQueue(periodSongs, playedSongs);
+                PlayAll.startPlayAll(true); // 🔥 true 추가: 이전 리스트를 덮어쓰고 강제 재생
+
+            } catch (err) {
+                console.error("기간별 데이터 불러오기 오류:", err);
+                alert("노래 데이터를 불러오는데 실패했습니다.");
+            }
+        });
+    }
+});
+
 document.addEventListener("DOMContentLoaded", async () => {
-    // 1. 그룹 카테고리를 먼저 로드 (비동기 처리로 초기 그룹 ID 설정 대기)
     await loadGroupCategories(); 
-    
-    // 2. 그룹 ID가 설정된 후 달력 데이터 가져오기
     fetchAndRenderCalendar(true);
-    
     setupEventListeners();
 
-    // 월 이동 버튼 이벤트
     const prevBtn = document.getElementById("prev-month");
     const nextBtn = document.getElementById("next-month");
     
@@ -28,11 +196,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const backBtn = document.getElementById("backToMain");
     if (backBtn) {
         backBtn.onclick = () => {
-            location.href = "../html/main.html"; // 메인 페이지 경로 확인 필요
+            location.href = "../html/main.html";
         };
     }
 
-    // 년.월 헤더 클릭 시 오늘 날짜로 이동
     const headerText = document.getElementById("current-month-year");
     if (headerText) {
         headerText.onclick = () => {
@@ -41,7 +208,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         };
     }
 
-    // --- 드롭다운 열기/닫기 로직 ---
     const selectWrapper = document.querySelector(".category-select-wrapper");
     const dropdown = document.getElementById("category-dropdown");
     const arrow = document.querySelector(".select-arrow");
@@ -56,34 +222,25 @@ document.addEventListener("DOMContentLoaded", async () => {
         };
     }
 
-    // 외부 클릭 시 드롭다운 닫기
     document.addEventListener("click", () => {
         if (dropdown) dropdown.classList.remove("show");
         if (arrow) arrow.style.transform = "rotate(0deg)";
     });
 });
 
-// DB에서 이번 달 데이터를 가져오는 함수
-// DB에서 이번 달 데이터를 가져오는 함수
-// DB에서 데이터를 가져오는 함수
 function fetchAndRenderCalendar(isInitial = false) {
     const year = viewDate.getFullYear();
     const month = viewDate.getMonth() + 1;
-
-    // 그룹 ID와 연/월을 서버로 전달[cite: 4, 7]
     const url = `../php/fetch_calendar.php?year=${year}&month=${month}&group_id=${selectedGroupId}`;
 
     fetch(url)
         .then(response => response.json())
         .then(data => {
             currentMonthSongs = data || []; 
-
-            // 🔥 추가: 페이지 첫 로드 시에만 오늘 날짜를 선택된 날짜로 기억
             if (isInitial && !selectedDateStr) {
                 const now = new Date();
                 selectedDateStr = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`;
             }
-
             renderCalendar(); 
         })
         .catch(error => {
@@ -93,85 +250,62 @@ function fetchAndRenderCalendar(isInitial = false) {
         });
 }
 
-
-// 드롭다운 카테고리 생성 함수
-// 드롭다운 카테고리 생성 함수 (api.php 통합 버전)
 async function loadGroupCategories() {
     const dropdown = document.getElementById("category-dropdown");
     const currentName = document.getElementById("current-category-name");
     
     if (!dropdown) return;
-    dropdown.innerHTML = ""; // 기존 항목 초기화
+    dropdown.innerHTML = ""; 
 
     try {
-        // 1. 내 정보 가져오기 (api.php의 get_my_info 액션 호출)[cite: 5, 9]
         const userRes = await fetch('../php/api.php?action=get_my_info');
         if (!userRes.ok) throw new Error('내 정보 로드 실패 (404 혹은 500)');
         const userData = await userRes.json();
         const myName = userData.username || "";
 
-        // 2. (나) 항목 생성 및 닉네임 표시 [요청사항 1번 적용]
         addDropdownItem(`(나) ${myName}`, 0); 
         if (currentName) currentName.innerText = `(나) ${myName}`;
 
-        // 3. 내가 가입한 그룹 목록 가져오기 (api.php의 get_my_groups 액션 호출)
         const groupRes = await fetch('../php/api.php?action=get_my_groups');
         if (!groupRes.ok) throw new Error('그룹 목록 로드 실패');
         const groupData = await groupRes.json();
 
         if (groupData.success && groupData.groups && groupData.groups.length > 0) {
-            // 4. 그룹 목록을 순차적으로 드롭다운에 추가[cite: 3, 9]
             groupData.groups.forEach(group => {
                 addDropdownItem(group.group_name, group.group_id);
             });
         }
     } catch (err) {
         console.error("카테고리 로드 중 오류 발생:", err);
-        // 에러 발생 시 기본값이라도 표시
         addDropdownItem("(나)", 0);
     }
 
-    /**
-     * 드롭다운 항목 생성 및 클릭 이벤트 연결 공통 함수
-     */
     function addDropdownItem(name, id) {
         const item = document.createElement('div');
         item.className = "dropdown-item";
         item.innerText = name;
-        
         item.onclick = (e) => {
-            e.stopPropagation(); // 부모(selectWrapper) 클릭 이벤트 전파 방지
-            
-            if (currentName) currentName.innerText = name; // 선택된 이름으로 상단 텍스트 변경[cite: 3]
-            
-            // 드롭다운 닫기 및 화살표 원위치
+            e.stopPropagation(); 
+            if (currentName) currentName.innerText = name; 
             if (dropdown) dropdown.classList.remove("show");
             const arrow = document.querySelector(".select-arrow");
             if (arrow) arrow.style.transform = "rotate(0deg)";
-
-            // 5. 카테고리 선택 시 해당 그룹 ID로 데이터 갱신 로직 실행[cite: 3, 9]
             selectCategory(id); 
         };
-        
         dropdown.appendChild(item);
     }
 }
 
-// 카테고리 선택 시 처리
 function selectCategory(groupId) {
-    console.log("선택된 그룹 ID:", groupId);
-    selectedGroupId = groupId; // 전역 변수 업데이트
-    fetchAndRenderCalendar(); // 선택된 그룹의 데이터로 달력 갱신
+    selectedGroupId = groupId;
+    fetchAndRenderCalendar();
 }
 
-// 캘린더 그리기 함수
-// 캘린더 그리기 함수
-// 캘린더 그리기 함수
 function renderCalendar() {
     const grid = document.getElementById("calendar-grid");
     const headerText = document.getElementById("current-month-year");
     
-    grid.innerHTML = ""; // 기존 그리드 초기화
+    grid.innerHTML = ""; 
     
     const year = viewDate.getFullYear();
     const month = viewDate.getMonth();
@@ -181,12 +315,10 @@ function renderCalendar() {
     const lastDate = new Date(year, month + 1, 0).getDate();
     const now = new Date();
 
-    // 1. 시작 요일 맞추기 (공백 생성)[cite: 4]
     for (let i = 0; i < firstDay; i++) { 
         grid.innerHTML += `<div class="day empty"></div>`; 
     }
 
-    // 2. 날짜 생성 루프
     for (let d = 1; d <= lastDate; d++) {
         const dateStr = `${year}.${String(month + 1).padStart(2, '0')}.${String(d).padStart(2, '0')}`;
         const todaysSongs = currentMonthSongs.filter(s => s.uploadDate === dateStr);
@@ -195,27 +327,20 @@ function renderCalendar() {
         dayEl.className = "day";
         dayEl.innerText = d;
         
-        // 추천 노래가 있는 날 표시[cite: 4]
         if (todaysSongs.length > 0) {
             dayEl.classList.add('attended');
         }
 
-        // 🔥 수정: 선택된 날짜(selectedDateStr)와 일치하는 칸을 활성화[cite: 4]
         if (selectedDateStr === dateStr) {
             dayEl.classList.add('active');
-            showSongs(todaysSongs); // 해당 날짜의 노래 목록 표시
-        } 
-        // 만약 선택된 날짜가 현재 달력 범위 밖이고, 오늘이 이 달에 있다면 오늘을 하이라이트 (선택은 아님)
-        else if (!selectedDateStr && year === now.getFullYear() && month === now.getMonth() && d === now.getDate()) {
+            showSongs(todaysSongs); 
+        } else if (!selectedDateStr && year === now.getFullYear() && month === now.getMonth() && d === now.getDate()) {
             dayEl.classList.add('active');
         }
 
-        // 날짜 클릭 이벤트[cite: 4]
         dayEl.onclick = () => {
             document.querySelectorAll('.day').forEach(el => el.classList.remove('active'));
             dayEl.classList.add('active');
-            
-            // 🔥 중요: 클릭한 날짜를 전역 변수에 저장하여 카테고리 변경 시에도 유지하게 함[cite: 4]
             selectedDateStr = dateStr; 
             showSongs(todaysSongs);
         };
@@ -223,7 +348,6 @@ function renderCalendar() {
     }
 }
 
-// 선택된 날짜의 노래 카드 표시 함수
 function showSongs(songs) {
     const listContainer = document.getElementById("selected-song-list");
     if (!listContainer) return;
@@ -241,18 +365,15 @@ function showSongs(songs) {
         wrapper.setAttribute("onmouseup", "resetToCenter(this)");
         wrapper.setAttribute("ontouchend", "resetToCenter(this)");
         
-        // showSongs 함수 내부의 infoHtml 수정
         const infoHtml = `
             <div class="info-area">
                 <span class="user-name" style="font-weight: bold;">${song.userName}</span>
                 <span class="user-id" style="font-size: 11px; color: #666;">@${song.loginId}</span>
-                <!-- 한마디 앞뒤에 따옴표 추가 및 클래스 지정 -->
                 <span class="user-comment">"${song.comment}"</span>
                 <span class="upload-time" style="font-size: 10px; color: #999;">${song.uploadTime}</span>
             </div>
         `;
 
-        // calendar.js 내부 showSongs 함수 부분
         wrapper.innerHTML = `
             <div class="thumb-area" onclick="window.open('${song.url}', '_blank')">
                 <img src="${song.thumb}" 
@@ -275,21 +396,12 @@ function resetToCenter(element) {
     const scrollLeft = element.scrollLeft;
     const scrollWidth = element.scrollWidth;
     const clientWidth = element.clientWidth;
-    const threshold = 60; // 60px 이상 밀었을 때만 넘어가도록 설정
+    const threshold = 60; 
 
-    // 사용자가 손을 뗐을 때 즉시 실행하여 반응성 향상
     if (scrollLeft > threshold) {
-        // 정보 영역(끝)으로 이동
-        element.scrollTo({ 
-            left: scrollWidth - clientWidth, 
-            behavior: 'smooth' 
-        });
+        element.scrollTo({ left: scrollWidth - clientWidth, behavior: 'smooth' });
     } else {
-        // 원래 위치(썸네일)로 이동
-        element.scrollTo({ 
-            left: 0, 
-            behavior: 'smooth' 
-        });
+        element.scrollTo({ left: 0, behavior: 'smooth' });
     }
 }
 
@@ -310,3 +422,367 @@ function setupEventListeners() {
         }
     });
 }
+
+// ============================================================
+// 🔥 플로팅 미니 플레이어 & 전체 재생 모듈 (페이지 유지 기능 추가)
+// ============================================================
+async function fetchPlayedSongs() {
+    try {
+        const response = await fetch('../php/api.php?action=get_played_history'); 
+        if (!response.ok) return [];
+        const text = await response.text();
+        return text ? JSON.parse(text).playedSongs || [] : []; 
+    } catch (error) { return []; }
+}
+async function savePlayedSong(songId) {
+    try {
+        await fetch('../php/api.php?action=save_played_history', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ song_id: songId })
+        });
+    } catch (error) {}
+}
+
+// ============================================================
+// 🔥 공통 플로팅 미니 플레이어 & 전체 재생 모듈 (페이지 간 상태 유지 & 중복 재생 방지)
+// ============================================================
+const PlayAll = (() => {
+    let player = null, apiReady = false, pendingStart = false;
+    let pendingTime = 0, pendingAutoplay = false;
+    let queue = [];      // 현재 진짜로 재생 중인 플레이어 큐
+    let pageQueue = [];  // 현재 보고 있는 화면(페이지)의 노래 큐
+    let currentIndex = -1, isPlaying = false, isExpanded = false;
+    let isFloating = false;
+    let playedSongIds = new Set();
+    let $playAllBtn, $miniPlayer, $title, $sub, $thumb, $prev, $next, $playPause, $playPauseIcon, $queueList;
+    let isDragging = false, dragStartX = 0, dragStartY = 0, initialLeft = 0, initialTop = 0;
+
+    function extractYouTubeID(url) {
+        const match = url ? url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i) : null;
+        return (match && match[1].length === 11) ? match[1] : null;
+    }
+
+    // 🔥 공통 토스트 알림 (모든 페이지 호환용)
+    function showToastSafe(msg) {
+        if (typeof showToast === 'function') {
+            showToast(msg);
+        } else {
+            const toast = document.createElement('div');
+            toast.innerText = msg;
+            toast.style.cssText = `
+                position: fixed; bottom: 120px; left: 50%; transform: translateX(-50%);
+                background-color: rgba(0, 0, 0, 0.75); color: #fff; padding: 12px 24px;
+                border-radius: 25px; font-size: 11px; font-weight: 500; z-index: 10000;
+                opacity: 0; transition: opacity 0.3s ease-in-out; pointer-events: none; text-align: center;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            `;
+            document.body.appendChild(toast);
+            requestAnimationFrame(() => toast.style.opacity = '1');
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => document.body.removeChild(toast), 300);
+            }, 2000);
+        }
+    }
+
+    function saveState() {
+        if (queue.length === 0) return;
+        const state = {
+            queue, currentIndex,
+            playedSongIds: Array.from(playedSongIds),
+            currentTime: player && typeof player.getCurrentTime === 'function' ? player.getCurrentTime() : 0,
+            isPlaying, isExpanded
+        };
+        sessionStorage.setItem('miniPlayerState', JSON.stringify(state));
+    }
+    window.addEventListener('beforeunload', saveState);
+
+    function restoreState() {
+        const stateStr = sessionStorage.getItem('miniPlayerState');
+        if (!stateStr) return;
+        try {
+            const state = JSON.parse(stateStr);
+            if (state && state.queue && state.queue.length > 0) {
+                queue = state.queue;
+                currentIndex = state.currentIndex;
+                playedSongIds = new Set(state.playedSongIds || []);
+                isExpanded = state.isExpanded;
+                pendingTime = state.currentTime || 0;
+                pendingAutoplay = state.isPlaying || false;
+
+                $miniPlayer.classList.add('show');
+                $miniPlayer.setAttribute('aria-hidden', 'false');
+                $miniPlayer.removeAttribute('inert');
+
+                if (isExpanded) {
+                    $miniPlayer.style.transition = 'none';
+                    $miniPlayer.classList.add('expanded');
+                    setTimeout(() => { $miniPlayer.style.transition = ''; }, 50);
+                    renderQueueList();
+                }
+                renderMiniPlayer();
+                setPlayingUI(pendingAutoplay);
+                pendingStart = true;
+            }
+        } catch(e) {}
+    }
+
+    window.onYouTubeIframeAPIReady = function() {
+        apiReady = true;
+        try {
+            player = new YT.Player('yt-player', {
+                height: '100%', width: '100%',
+                playerVars: { autoplay: 0, controls: 1, playsinline: 1 },
+                events: {
+                    onReady: () => { 
+                        if (pendingStart && queue.length > 0) { 
+                            pendingStart = false; 
+                            if (pendingTime > 0) {
+                                player.cueVideoById(queue[currentIndex].videoId, pendingTime);
+                                if (pendingAutoplay) setTimeout(() => { try { player.playVideo(); } catch(e){} }, 300);
+                                pendingTime = 0;
+                            } else {
+                                playAt(currentIndex >= 0 ? currentIndex : 0); 
+                            }
+                        } 
+                    },
+                    onStateChange: (e) => {
+                        if (e.data === YT.PlayerState.PLAYING) setPlayingUI(true);
+                        else if (e.data === YT.PlayerState.PAUSED) setPlayingUI(false);
+                        else if (e.data === YT.PlayerState.ENDED) {
+                            if (queue[currentIndex]) {
+                                // savePlayedSong 함수는 외부에 선언되어 있어야 함
+                                if (typeof savePlayedSong === 'function') savePlayedSong(queue[currentIndex].songId);
+                                playedSongIds.add(queue[currentIndex].songId);
+                            }
+                            currentIndex < queue.length - 1 ? playAt(currentIndex + 1) : stopAll();
+                        }
+                    }
+                }
+            });
+        } catch (e) {}
+    };
+
+    function syncQueue(songs, pSongs = []) {
+        playedSongIds = new Set(pSongs);
+        pageQueue = (songs || []).map(s => ({
+            songId: s.song_id || s.songId, 
+            videoId: extractYouTubeID(s.youtube_url || s.url),
+            title: s.title || s.videoTitle || '제목 없음', 
+            thumb: s.thumbnail_img || s.thumb || '', 
+            loginId: s.login_id || s.loginId || s.username
+        })).filter(item => item.videoId);
+        
+        if ($playAllBtn) $playAllBtn.disabled = (pageQueue.length === 0);
+        saveState(); 
+    }
+
+    function startPlayAll(forcePlay = false) {
+        if (forcePlay) {
+            if (pageQueue.length === 0) {
+                showToastSafe('노래가 없습니다.');
+                return;
+            }
+            
+            // 🔥 이미 재생 중인(혹은 일시정지 중인) 리스트가 있다면 덮어쓰지 않고 경고창 표시
+            if (queue.length > 0) {
+                showToastSafe('삭제하고 다시 시도해주세요');
+                return;
+            }
+
+            queue = [...pageQueue];
+            currentIndex = 0;
+            saveState();
+        }
+
+        if (queue.length === 0) return;
+        
+        if (!forcePlay && $miniPlayer && $miniPlayer.classList.contains('show')) { 
+            toggleExpand(); 
+            return; 
+        }
+        
+        $miniPlayer.classList.add('show');
+        $miniPlayer.setAttribute('aria-hidden', 'false');
+        $miniPlayer.removeAttribute('inert');
+
+        if (!apiReady || !player || typeof player.loadVideoById !== 'function') {
+            pendingStart = true; pendingTime = 0; renderMiniPlayer(); setPlayingUI(true); return;
+        }
+        playAt(forcePlay ? 0 : currentIndex);
+    }
+
+    function playAt(index) {
+        if (index < 0 || index >= queue.length) return;
+        currentIndex = index; renderMiniPlayer(); renderQueueList();
+        if (!player || typeof player.cueVideoById !== 'function') { pendingStart = true; return; }
+        try {
+            player.cueVideoById(queue[currentIndex].videoId);
+            setTimeout(() => { try { player.playVideo(); } catch(e){} }, 300);
+        } catch (e) {}
+    }
+
+    function toggleExpand() {
+        isExpanded = !isExpanded;
+        if (isExpanded) {
+            $miniPlayer.style.left = ''; $miniPlayer.style.top = ''; $miniPlayer.style.transform = '';
+            requestAnimationFrame(() => $miniPlayer.classList.add('expanded'));
+            renderQueueList();
+        } else {
+            $miniPlayer.classList.remove('expanded');
+        }
+    }
+
+    function renderMiniPlayer() {
+        const item = queue[currentIndex];
+        if (!item) return;
+        if ($title) $title.textContent = item.title;
+        if ($sub) $sub.textContent = `@${item.loginId} · ${currentIndex + 1} / ${queue.length}`;
+        if ($thumb) $thumb.src = item.thumb;
+        if ($prev) $prev.disabled = (currentIndex <= 0);
+        if ($next) $next.disabled = (currentIndex >= queue.length - 1);
+    }
+
+    function renderQueueList() {
+        if (!$queueList || !isExpanded) return;
+        $queueList.innerHTML = '';
+        queue.forEach((item, index) => {
+            const isPlayed = playedSongIds.has(item.songId);
+            const qItem = document.createElement('div');
+            qItem.className = `q-item ${isPlayed ? 'played' : ''} ${index === currentIndex ? 'current' : ''}`;
+            qItem.innerHTML = `<div class="q-thumb"><img src="${item.thumb}" alt=""></div>
+                <div class="q-info">
+                    <div class="q-title">${isPlayed ? '<span class="q-label-played">재생 완료</span>' : ''}${item.title}</div>
+                    <div class="q-user">@${item.loginId}</div>
+                </div>`;
+            qItem.onclick = () => playAt(index);
+            $queueList.appendChild(qItem);
+        });
+        const currentEl = $queueList.querySelector('.current');
+        if (currentEl) currentEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function setPlayingUI(playing) {
+        isPlaying = playing;
+        if ($playPauseIcon) $playPauseIcon.className = playing ? 'fas fa-pause' : 'fas fa-play';
+    }
+
+    function onDragStart(e) {
+        if (e.target.closest('.mp-btn') || isExpanded) { if(isExpanded) toggleExpand(); return; }
+        const touch = e.touches ? e.touches[0] : e;
+        dragStartX = touch.clientX; dragStartY = touch.clientY; isDragging = false;
+        
+        const rect = $miniPlayer.getBoundingClientRect();
+        if ($miniPlayer.style.transform !== 'none') {
+            $miniPlayer.style.transform = 'none'; $miniPlayer.style.left = rect.left + 'px'; $miniPlayer.style.top = rect.top + 'px';
+        }
+        initialLeft = parseFloat($miniPlayer.style.left) || rect.left;
+        initialTop = parseFloat($miniPlayer.style.top) || rect.top;
+        
+        document.addEventListener(e.type === 'touchstart' ? 'touchmove' : 'mousemove', onDragMove, {passive: false});
+        document.addEventListener(e.type === 'touchstart' ? 'touchend' : 'mouseup', onDragEnd);
+    }
+    function onDragMove(e) {
+        const touch = e.touches ? e.touches[0] : e;
+        const dx = touch.clientX - dragStartX; 
+        const dy = touch.clientY - dragStartY;
+        
+        // 5픽셀 이상 움직이면 드래그로 판정
+        if (!isDragging && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
+            isDragging = true;
+            
+            // 🔥 아직 플로팅 모드가 아니라면 전환 (긴 바 -> 썸네일 정사각형)
+            if (!isFloating) {
+                isFloating = true;
+                $miniPlayer.classList.add('floating-mode');
+                
+                // 손가락 중앙에 정사각형 썸네일(64x64)이 오도록 즉각 위치 보정
+                dragStartX = touch.clientX;
+                dragStartY = touch.clientY;
+                initialLeft = touch.clientX - 32;
+                initialTop = touch.clientY - 32;
+            }
+        }
+        
+        if (isDragging) { 
+            e.preventDefault(); 
+            // 좌표를 재계산하여 손가락을 따라다니도록 설정
+            const currentDx = touch.clientX - dragStartX;
+            const currentDy = touch.clientY - dragStartY;
+            $miniPlayer.style.left = `${initialLeft + currentDx}px`; 
+            $miniPlayer.style.top = `${initialTop + currentDy}px`; 
+        }
+    }
+
+    function onDragEnd(e) {
+        document.removeEventListener(e.type === 'touchend' ? 'touchmove' : 'mousemove', onDragMove);
+        document.removeEventListener(e.type === 'touchend' ? 'touchend' : 'mouseup', onDragEnd);
+        
+        if (!isDragging) {
+            // 🔥 제자리에서 터치(클릭)했을 때의 동작
+            if (isFloating) {
+                // 플로팅 모드(정사각형)를 클릭하면 원래 하단 긴 바로 복귀
+                isFloating = false;
+                $miniPlayer.classList.remove('floating-mode');
+                $miniPlayer.style.left = ''; 
+                $miniPlayer.style.top = ''; 
+                $miniPlayer.style.transform = ''; // CSS 기본 위치(translate)로 복귀
+            } else {
+                // 하단 긴 바 모드에서 클릭하면 전체화면 확장
+                toggleExpand();
+            }
+        }
+        isDragging = false;
+    }
+
+    function stopAll() {
+        try { player && player.stopVideo(); } catch (e) {}
+        isPlaying = false; currentIndex = -1; queue = [];
+        isFloating = false; // 🔥 재생 중지 시 플로팅 상태도 초기화
+        sessionStorage.removeItem('miniPlayerState');
+        if ($miniPlayer) {
+            isExpanded = false;
+            $miniPlayer.classList.remove('expanded', 'show', 'floating-mode');
+            $miniPlayer.setAttribute('aria-hidden', 'true');
+            $miniPlayer.setAttribute('inert', '');
+            $miniPlayer.style.transform = 'translate(-50%, 0)';
+            $miniPlayer.style.left = ''; 
+            $miniPlayer.style.top = ''; 
+        }
+    }
+    function onDragEnd(e) {
+        document.removeEventListener(e.type === 'touchend' ? 'touchmove' : 'mousemove', onDragMove);
+        document.removeEventListener(e.type === 'touchend' ? 'touchend' : 'mouseup', onDragEnd);
+        if (!isDragging) toggleExpand();
+        isDragging = false;
+    }
+
+    function init() {
+        $playAllBtn = document.getElementById('play-all-btn');
+        $miniPlayer = document.getElementById('miniPlayer');
+        $queueList = document.getElementById('mpQueueList');
+        $thumb = document.getElementById('miniPlayerThumb');
+        $title = document.getElementById('miniPlayerTitle'); $sub = document.getElementById('miniPlayerSub');
+        $prev = document.getElementById('mpPrevBtn'); $next = document.getElementById('mpNextBtn');
+        $playPause = document.getElementById('mpPlayPauseBtn'); $playPauseIcon = document.getElementById('mpPlayPauseIcon');
+        $close = document.getElementById('mpCloseBtn');
+
+        if ($playAllBtn) $playAllBtn.onclick = () => startPlayAll(true);
+        
+        if ($prev) $prev.onclick = () => currentIndex > 0 ? playAt(currentIndex - 1) : (player && typeof player.seekTo === 'function' && player.seekTo(0, true));
+        if ($next) $next.onclick = () => currentIndex < queue.length - 1 ? playAt(currentIndex + 1) : stopAll();
+        if ($playPause) $playPause.onclick = () => player && (player.getPlayerState() === YT.PlayerState.PLAYING ? player.pauseVideo() : player.playVideo());
+        if ($close) $close.onclick = stopAll;
+
+        const $mpHeader = document.getElementById('mpHeader');
+        if ($mpHeader) {
+            $mpHeader.addEventListener('mousedown', onDragStart);
+            $mpHeader.addEventListener('touchstart', onDragStart, {passive: true});
+        }
+        
+        restoreState();
+    }
+
+    return { init, syncQueue, startPlayAll };
+})();

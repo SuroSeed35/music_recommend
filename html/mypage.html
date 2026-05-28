@@ -161,6 +161,35 @@
             </div>
         </div>
     </div>
+    <div class="mini-player" id="miniPlayer" aria-hidden="true">
+            <div class="mini-player-header" id="mpHeader">
+                <div class="mini-player-thumb">
+                    <img id="miniPlayerThumb" src="" alt="">
+                </div>
+                <div class="mini-player-info">
+                    <div class="mini-player-title" id="miniPlayerTitle">곡 제목</div>
+                    <div class="mini-player-sub" id="miniPlayerSub">@user · 1 / 1</div>
+                </div>
+                <div class="mini-player-controls">
+                    <button class="mp-btn" id="mpPrevBtn" aria-label="이전 곡" type="button"><i class="fas fa-step-backward"></i></button>
+                    <button class="mp-btn mp-btn-main" id="mpPlayPauseBtn" aria-label="재생/일시정지" type="button"><i class="fas fa-pause" id="mpPlayPauseIcon"></i></button>
+                    <button class="mp-btn" id="mpNextBtn" aria-label="다음 곡" type="button"><i class="fas fa-step-forward"></i></button>
+                    <button class="mp-btn mp-btn-close" id="mpCloseBtn" aria-label="닫기" type="button"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+            <div class="mini-player-body" id="mpBody">
+                <div class="mp-video-container">
+                    <div id="yt-player"></div>
+                </div>
+                <div class="mp-queue-header">다음 재생 목록</div>
+                <div class="mp-queue-list" id="mpQueueList"></div>
+            </div>
+        </div>
+        <div id="yt-player-wrapper" aria-hidden="true" style="position:fixed; width:1px; height:1px; overflow:hidden; z-index:-1; opacity:0;">
+            <div id="yt-player"></div>
+        </div>
+
+        <script src="https://www.youtube.com/iframe_api"></script>
 
     <script src="../js/mypage.js"></script>
 </body>

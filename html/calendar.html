@@ -10,14 +10,11 @@
 </head>
 <body>
     <div class="main-container">
-        <!-- calendar_3.html 수정 -->
         <header class="calendar-header-container">
-            <!-- 1층: 뒤로가기 버튼만 있는 줄 -->
             <div class="back-button-row">
                 <i class="fas fa-chevron-left back-to-main" id="backToMain"></i>
             </div>
             
-            <!-- 2층: 월 이동 버튼과 날짜가 있는 줄 -->
             <div class="month-control-row">
                 <i id="prev-month" class="fas fa-chevron-left month-btn"></i>
                 <span id="current-month-year"></span>
@@ -30,20 +27,81 @@
         </div>
 
         <div id="calendar-grid" class="calendar-grid"></div>
-        <!-- 구분선 아래에 추가 -->
         <hr class="separator">
+
+        <div class="play-all-controls" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <label class="switch">
+                    <input type="checkbox" id="playAllSwitch">
+                    <span class="slider round"></span>
+                </label>
+                <span id="playAllLabel" style="font-size: 14px; font-weight: bold;">날짜별 듣기</span>
+            </div>
+            <button id="playSelectedBtn" style="background: #000000; border: none; padding: 8px 16px; border-radius: 20px; font-weight: 500; cursor: pointer; color: white; font-size: 11px;">
+                모아듣기
+            </button>
+        </div>
+
+        <!-- 2. 기간 선택 모달 (미리보기 기능 추가됨) -->
+        <div id="periodModalOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); z-index: 10000; align-items: center; justify-content: center;">
+            <div style="background: #fff; padding: 20px; border-radius: 12px; width: 85%; max-width: 340px; text-align: center; display: flex; flex-direction: column; max-height: 80vh;">
+                <h3 style="margin-top: 0; flex-shrink: 0;">기간 선택</h3>
+                <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin: 15px 0; flex-shrink: 0;">
+                    <input type="date" id="periodStartDate" style="padding: 5px; border-radius: 5px; border: 1px solid #ccc; width: 110px;">
+                    <span>~</span>
+                    <input type="date" id="periodEndDate" style="padding: 5px; border-radius: 5px; border: 1px solid #ccc; width: 110px;">
+                </div>
+                
+                <!-- 🔥 미리보기 곡 리스트 영역 -->
+                <div id="periodPreviewList" style="flex: 1; overflow-y: auto; text-align: left; border: 1px solid #eee; border-radius: 8px; padding: 10px; margin-bottom: 15px; display: none;">
+                    <!-- JS에서 동적으로 곡 목록이 채워집니다 -->
+                </div>
+
+                <div style="display: flex; gap: 10px; flex-shrink: 0;">
+                    <button id="periodCancelBtn" style="flex: 1; padding: 10px; border: none; border-radius: 8px; background: #eee; cursor: pointer; font-weight: bold;">취소</button>
+                    <button id="periodPlayBtn" style="flex: 1; padding: 10px; border: none; border-radius: 8px; background: #fdd835; cursor: pointer; font-weight: bold;">재생</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="mini-player" id="miniPlayer" aria-hidden="true">
+            <div class="mini-player-header" id="mpHeader">
+                <div class="mini-player-thumb">
+                    <img id="miniPlayerThumb" src="" alt="">
+                </div>
+                <div class="mini-player-info">
+                    <div class="mini-player-title" id="miniPlayerTitle">곡 제목</div>
+                    <div class="mini-player-sub" id="miniPlayerSub">@user · 1 / 1</div>
+                </div>
+                <div class="mini-player-controls">
+                    <button class="mp-btn" id="mpPrevBtn" type="button"><i class="fas fa-step-backward"></i></button>
+                    <button class="mp-btn mp-btn-main" id="mpPlayPauseBtn" type="button"><i class="fas fa-pause" id="mpPlayPauseIcon"></i></button>
+                    <button class="mp-btn" id="mpNextBtn" type="button"><i class="fas fa-step-forward"></i></button>
+                    <button class="mp-btn mp-btn-close" id="mpCloseBtn" type="button"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+
+            <div class="mini-player-body" id="mpBody">
+                <div class="mp-video-container">
+                    <div id="yt-player"></div>
+                </div>
+                <div class="mp-queue-header">다음 재생 목록</div>
+                <div class="mp-queue-list" id="mpQueueList"></div>
+            </div>
+        </div>
 
         <div class="category-select-wrapper">
             <div id="current-category-name" class="current-category">전체</div>
             <i class="fas fa-chevron-down select-arrow"></i>
             
-            <!-- 실제 클릭 시 나타날 드롭다운 메뉴 -->
             <div id="category-dropdown" class="category-dropdown-menu">
-                <!-- js에서 항목이 생성됩니다 -->
-            </div>
+                </div>
         </div>
+        
         <div id="selected-song-list" class="song-card-container"></div>
     </div>
+    
     <script src="../js/calendar.js"></script>
+    <script src="https://www.youtube.com/iframe_api"></script>
 </body>
 </html>

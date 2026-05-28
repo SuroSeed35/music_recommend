@@ -890,3 +890,59 @@ html {
     font-weight: 700;
     flex-shrink: 0;
 }
+
+/* --- 플로팅 모드 (드래그 시 정사각형 썸네일 변환) --- */
+.mini-player.floating-mode {
+    width: 64px !important;
+    height: 64px !important;
+    max-width: 64px !important;
+    border-radius: 16px !important;
+    padding: 0 !important;
+    transform: none !important;
+    background: transparent !important;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3) !important;
+}
+
+.mini-player.floating-mode .mini-player-header {
+    padding: 0 !important;
+    height: 100% !important;
+    width: 100% !important;
+}
+
+.mini-player.floating-mode .mini-player-thumb {
+    width: 100% !important;
+    height: 100% !important;
+    border-radius: 16px !important;
+}
+
+/* 플로팅 모드일 때 제목, 서브텍스트, 재생 버튼 등 숨기기 */
+.mini-player.floating-mode .mini-player-info,
+.mini-player.floating-mode .mini-player-controls {
+    display: none !important;
+}
+
+/* --- 플로팅 모드 (드래그 시 정사각형 썸네일 변환) --- */
+.mini-player.floating-mode {
+    width: 64px !important;
+    height: 64px !important;
+    max-width: 64px !important;
+    border-radius: 16px !important;
+    padding: 0 !important;
+    transform: none !important;
+    background: transparent !important;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3) !important;
+}
+.mini-player.floating-mode .mini-player-header {
+    padding: 0 !important;
+    height: 100% !important;
+    width: 100% !important;
+}
+.mini-player.floating-mode .mini-player-thumb {
+    width: 100% !important;
+    height: 100% !important;
+    border-radius: 16px !important;
+}
+.mini-player.floating-mode .mini-player-info,
+.mini-player.floating-mode .mini-player-controls {
+    display: none !important;
+}

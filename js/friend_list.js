@@ -12,10 +12,13 @@ document.addEventListener('DOMContentLoaded', () => {
             location.href = "../html/music_list.html"; // 실제 메인 파일 경로에 맞춰 수정하세요
         };
     }
+
+    if (typeof PlayAll !== 'undefined') PlayAll.init();
     
     let currentMode = 'LIST';
     let selectedGroupMembers = []; 
     let currentTarget = null;
+    let isFloating = false;
     let modalAction = "";
 
     loadData();
