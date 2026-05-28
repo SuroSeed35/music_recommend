@@ -313,3 +313,13 @@ CREATE TABLE IF NOT EXISTS song_comments (
 );
 
 ALTER TABLE song_comments ADD COLUMN group_id INT NOT NULL DEFAULT 0;
+
+CREATE TABLE played_history (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '고유 식별자',
+    user_id VARCHAR(100) NOT NULL COMMENT '회원 아이디 (또는 유저 고유 번호)',
+    song_id VARCHAR(100) NOT NULL COMMENT '유튜브 영상 ID (또는 곡 고유 번호)',
+    played_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '재생 완료 기록 시간',
+    
+    -- 동일한 유저가 같은 곡을 중복해서 저장하지 않도록 제약 조건 추가
+    UNIQUE KEY unique_user_song (user_id, song_id)
+);

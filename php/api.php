@@ -277,7 +277,48 @@ switch ($action) {
             echo json_encode(["success" => false, "message" => "삭제 실패"]);
         }
         break;
-}
+
+    // 🔥 여기서부터 새롭게 추가된 재생 완료 기록 부분입니다.
+    case 'get_played_history':
+        if (!isset($_SESSION['user_id'])) {
+            echo json_encode(['playedSongs' => []]);
+            break;
+        }
+
+        $playedSongs = [];
+        $sql = "SELECT song_id FROM played_history WHERE user_id = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("s", $_SESSION['user_id']);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        while ($row = $result->fetch_assoc()) {
+            $playedSongs[] = $row['song_id'];
+        }
+
+        echo json_encode(['playedSongs' => $playedSongs]);
+        break;
+
+    case 'save_played_history':
+        $data = json_decode(file_get_contents('php://input'), true);
+        $song_id = $data['song_id'] ?? '';
+        $user_id = $_SESSION['user_id'] ?? null;
+
+        if ($user_id && $song_id) {
+            $sql = "INSERT IGNORE INTO played_history (user_id, song_id) VALUES (?, ?)";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("ss", $user_id, $song_id);
+            if ($stmt->execute()) {
+                echo json_encode(['success' => true]);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'DB 저장 실패']);
+            }
+        } else {
+            echo json_encode(['success' => false, 'message' => '유효하지 않은 데이터']);
+        }
+        break;
+
+} // switch 종료 괄호
 
 mysqli_close($conn);
 ?>

@@ -78,6 +78,7 @@ function setupDateNavigation() {
 }
 
 // --- 4. 데이터 로드 (DB 연동) ---
+// --- 4. 데이터 로드 (DB 연동) ---
 async function loadData() {
     try {
         const targetDate = formatDate(currentDate);
@@ -89,11 +90,14 @@ async function loadData() {
             return;
         }
 
-        // 1. 피드(노래) 목록 출력
-        renderFeedSongs(data.feed_songs);
+        // 🔥 피드를 그리기 전에 내가 들었던 곡 ID 목록을 가져옵니다.
+        const playedSongs = await fetchPlayedSongs();
+
+        // 1. 피드(노래) 목록 출력 (가져온 playedSongs 배열을 같이 넘겨줍니다)
+        renderFeedSongs(data.feed_songs, playedSongs);
 
         // 2. 전체 재생 큐 동기화
-        PlayAll.syncQueue(data.feed_songs);
+        PlayAll.syncQueue(data.feed_songs, playedSongs);
 
         // 3. 친구 요청 목록 출력
         renderRequests(data.requests);
@@ -112,7 +116,7 @@ async function loadData() {
 /**
  * 🎵 피드 목록 렌더링
  */
-function renderFeedSongs(songs) {
+function renderFeedSongs(songs, playedSongs = []) {
     const container = document.getElementById('song-list-container');
     if (!container) return;
 
@@ -146,10 +150,25 @@ function renderFeedSongs(songs) {
         const infoName = song.username;
 
         if (song.song_id) {
+            // 🔥 1. 서버에서 가져온 들은 곡 목록에 현재 곡(song_id)이 있는지 확인
+            const isPlayed = playedSongs.includes(song.song_id);
+
+            // 🔥 2. 요소 최상단에 식별용 속성 부여 및 완료 클래스 추가
+            card.setAttribute('data-song-id', song.song_id);
+            if (isPlayed) {
+                card.classList.add('played'); 
+            }
+
             card.innerHTML = `
                 <div class="song-scroll-wrapper">
-                    <div class="thumb-area" style="cursor: pointer;">
+                    <div class="thumb-area" style="cursor: pointer; position: relative;">
                         <img src="${song.thumbnail_img}" alt="thumbnail" class="thumb-img" onload="if(this.naturalWidth === 120 && this.src.includes('maxresdefault')) this.src = this.src.replace('maxresdefault', 'hqdefault');" onerror="if(this.src.includes('maxresdefault')) this.src = this.src.replace('maxresdefault', 'hqdefault');">
+                        
+                        <div class="complete-mark" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 12px; display: ${isPlayed ? 'flex' : 'none'}; align-items: center; gap: 4px; z-index: 10; pointer-events: none;">
+                            <span style="color: #20c997; font-size: 14px; font-weight: 900;">✓</span>
+                            <span style="color: #fff; font-size: 12px; font-weight: bold;">재생 완료</span>
+                        </div>
+
                         <div class="rolling-comment" id="rolling-comment-${song.song_id}"></div>
                         <div class="video-info-overlay">
                             <div class="video-title" style="color: #ffffff;">${song.title || '제목 없음'}</div>
@@ -788,6 +807,7 @@ const PlayAll = (() => {
     let isPlaying = false;
     let initialized = false;
     let isExpanded = false;
+    let playedSongIds = new Set();
 
     let $playAllBtn, $miniPlayer, $mpHeader, $thumb, $title, $sub;
     let $prev, $playPause, $playPauseIcon, $next, $close, $queueList;
@@ -827,7 +847,15 @@ const PlayAll = (() => {
     function onPlayerStateChange(e) {
         if (e.data === YT.PlayerState.PLAYING) setPlayingUI(true);
         else if (e.data === YT.PlayerState.PAUSED) setPlayingUI(false);
-        else if (e.data === YT.PlayerState.ENDED) playNext();
+        else if (e.data === YT.PlayerState.ENDED) {
+            // 현재 끝난 곡의 ID를 가져와서 DB 저장 요청
+            const currentItem = queue[currentIndex];
+            if (currentItem && currentItem.songId) {
+                savePlayedSong(currentItem.songId);
+                playedSongIds.add(currentItem.songId);
+            }
+            playNext(); // 다음 곡으로 이동
+        }
     }
 
     function onPlayerError(e) {
@@ -835,7 +863,8 @@ const PlayAll = (() => {
         setTimeout(() => playNext(), 400);
     }
 
-    function syncQueue(feedSongs) {
+    function syncQueue(feedSongs, pSongs = []) {
+        playedSongIds = new Set(pSongs); // DB에서 가져온 목록 셋팅
         const newQueue = (feedSongs || [])
             .filter(s => s && s.song_id && s.youtube_url)
             .map(s => ({
@@ -859,7 +888,14 @@ const PlayAll = (() => {
     }
 
     function startPlayAll() {
-        if (queue.length === 0) { showToastSafe('재생할 곡이 없습니다'); return; }
+        if (queue.length === 0) { showToastSafe('노래가 없습니다.'); return; }
+        
+        // 미니 플레이어가 이미 켜진 상태에서 전체 듣기를 다시 누르면 화면 축소/확장 토글
+        if ($miniPlayer && $miniPlayer.classList.contains('show')) {
+            toggleExpand();
+            return;
+        }
+
         showMiniPlayer();
         if (!apiReady || !player || typeof player.loadVideoById !== 'function') {
             pendingStart = true;
@@ -914,6 +950,7 @@ const PlayAll = (() => {
     }
 
     // --- [수정된 렌더링 로직] 상태 표시가 확실하게 반영됩니다 ---
+    // --- [수정된 렌더링 로직] 상태 표시가 확실하게 반영됩니다 ---
     function renderQueueList() {
         if (!$queueList || !isExpanded) return;
         
@@ -921,7 +958,9 @@ const PlayAll = (() => {
         
         queue.forEach((item, index) => {
             const isCurrent = (index === currentIndex);
-            const isPlayed = (index < currentIndex);
+            
+            // ✅ 과거 로직을 지우고, 오직 DB에 저장된 진짜 기록(playedSongIds)으로만 확인합니다.
+            const isPlayed = playedSongIds.has(item.songId);
             
             const qItem = document.createElement('div');
             qItem.className = 'q-item';
@@ -975,14 +1014,21 @@ const PlayAll = (() => {
         }
     }
 
+    let lastTouchTime = 0;
     function onDragStart(e) {
         if (e.target.closest('.mp-btn')) return;
+
+        // 모바일에서 touchstart 이후 발생하는 mousedown 이벤트 무시 (중복 실행 방지)
+        if (e.type === 'touchstart') {
+            lastTouchTime = Date.now();
+        } else if (e.type === 'mousedown' && Date.now() - lastTouchTime < 500) {
+            return; 
+        }
 
         if (isExpanded) {
             toggleExpand();
             return;
         }
-
         const touch = e.touches ? e.touches[0] : e;
         dragStartX = touch.clientX;
         dragStartY = touch.clientY;
@@ -1049,6 +1095,12 @@ const PlayAll = (() => {
         if ($miniPlayer) {
             isExpanded = false;
             $miniPlayer.classList.remove('expanded', 'show');
+            
+            // 🔥 추가된 부분: X 버튼을 눌렀을 때 포커스 해제 (aria-hidden 경고 해결)
+            if (document.activeElement && $miniPlayer.contains(document.activeElement)) {
+                document.activeElement.blur();
+            }
+
             $miniPlayer.setAttribute('aria-hidden', 'true');
             $miniPlayer.setAttribute('inert', '');
             
@@ -1097,3 +1149,45 @@ const PlayAll = (() => {
 
     return { init, syncQueue };
 })();
+
+// 1-1. 서버에서 내가 들은 곡 목록 가져오기
+// 1-1. 서버에서 내가 들은 곡 목록 가져오기 (에러 방어력 강화)
+async function fetchPlayedSongs() {
+    try {
+        const response = await fetch('../php/api.php?action=get_played_history'); 
+        if (!response.ok) throw new Error('네트워크 응답이 올바르지 않습니다.');
+        
+        // JSON 파싱 에러(Unexpected end of JSON)를 막기 위해 텍스트로 먼저 받기
+        const text = await response.text();
+        if (!text) return []; // 빈 값이 오면 그냥 빈 배열 반환
+
+        const data = JSON.parse(text); 
+        return data.playedSongs || []; 
+    } catch (error) {
+        console.error('재생 기록을 불러오는데 실패했습니다:', error);
+        return []; // 에러가 나도 앱이 멈추지 않게 빈 배열 반환
+    }
+}
+
+// 1-2. 곡 재생 완료 시 서버에 저장하기
+async function savePlayedSong(songId) {
+    try {
+        const response = await fetch('../php/api.php?action=save_played_history', { // API 경로 수정
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ song_id: songId })
+        });
+
+        if (response.ok) {
+            // 기존 .song-item 대신 실제 렌더링되는 .song-card를 찾도록 수정
+            const songCard = document.querySelector(`.song-card[data-song-id="${songId}"]`);
+            if (songCard) {
+                songCard.classList.add('played');
+                const mark = songCard.querySelector('.complete-mark');
+                if (mark) mark.style.display = 'block'; // 체크마크 표시
+            }
+        }
+    } catch (error) {
+        console.error('재생 기록 저장 중 오류 발생:', error);
+    }
+}
