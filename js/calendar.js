@@ -23,6 +23,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const periodPlayBtn = document.getElementById('periodPlayBtn');
     const periodPreviewList = document.getElementById('periodPreviewList');
 
+    // 🔥 새롭게 추가된 모달 내 화면 전환 요소들
+    const modalStep1 = document.getElementById('modal-step-1');
+    const modalStep2 = document.getElementById('modal-step-2');
+    const periodNextBtn = document.getElementById('periodNextBtn');
+    const periodBackBtn = document.getElementById('periodBackBtn');
+
     // 1. 스위치 토글 이벤트
     if (playAllSwitch) {
         playAllSwitch.addEventListener('change', (e) => {
@@ -65,12 +71,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     rangeStartStr = null;
                     rangeEndStr = null;
                     
-                    periodModal.style.display = 'flex';
-                    if (periodPreviewList) {
-                        periodPreviewList.style.display = 'none';
-                        periodPreviewList.innerHTML = '';
-                    }
+                    // 초기화 시 달력 화면(STEP 1)이 보이도록 설정
+                    if(modalStep1) modalStep1.style.display = 'flex';
+                    if(modalStep2) modalStep2.style.display = 'none';
+                    if (periodPreviewList) periodPreviewList.innerHTML = '';
                     
+                    periodModal.style.display = 'flex';
                     renderModalCalendar(); // 커스텀 달력 그리기
                 }
             }
@@ -81,6 +87,27 @@ document.addEventListener("DOMContentLoaded", () => {
     if (periodCancelBtn) {
         periodCancelBtn.addEventListener('click', () => {
             periodModal.style.display = 'none';
+        });
+    }
+
+    // 🔥 '다음' 버튼 누를 때 음악 리스트 불러오고 뷰 전환
+    if (periodNextBtn) {
+        periodNextBtn.addEventListener('click', () => {
+            if (!rangeStartStr || !rangeEndStr) {
+                alert("시작일과 종료일을 캘린더에서 모두 선택해주세요.");
+                return;
+            }
+            modalStep1.style.display = 'none';
+            modalStep2.style.display = 'flex';
+            loadCustomPreviewSongs(rangeStartStr, rangeEndStr);
+        });
+    }
+
+    // 🔥 '뒤로' 버튼 누를 때 다시 달력으로 전환
+    if (periodBackBtn) {
+        periodBackBtn.addEventListener('click', () => {
+            modalStep2.style.display = 'none';
+            modalStep1.style.display = 'flex';
         });
     }
 
@@ -209,17 +236,7 @@ function handleModalDayClick(dateStr) {
     
     // 달력 다시 그리기 (색칠)
     renderModalCalendar();
-    
-    // 두 개 모두 골라졌다면 하단에 미리보기 리스트 띄우기
-    if (rangeStartStr && rangeEndStr) {
-        loadCustomPreviewSongs(rangeStartStr, rangeEndStr);
-    } else {
-        const previewList = document.getElementById('periodPreviewList');
-        if (previewList) {
-            previewList.style.display = 'none';
-            previewList.innerHTML = '';
-        }
-    }
+    // [변경점] 여기 있던 하단 리스트 자동 표시 로직은 제거 (이제 '다음' 버튼 클릭 시 뜹니다)
 }
 
 // 🔥 지정된 기간으로 서버에서 미리보기용 노래 가져오기
@@ -227,7 +244,6 @@ async function loadCustomPreviewSongs(start, end) {
     const previewList = document.getElementById('periodPreviewList');
     if (!previewList) return;
 
-    previewList.style.display = 'block';
     previewList.innerHTML = '<div style="text-align:center; color:#888; font-size:13px; padding:20px 0;">노래를 불러오는 중...</div>';
 
     try {
@@ -395,7 +411,7 @@ function renderCalendar() {
     
     grid.innerHTML = ""; 
     
-    // [수정] 달력을 새로 그릴 때 하단 리스트를 일단 비웁니다 (초기 상태)
+    // 달력을 새로 그릴 때 하단 리스트를 일단 비웁니다
     if (listContainer) listContainer.innerHTML = ""; 
     
     const year = viewDate.getFullYear();
@@ -422,7 +438,7 @@ function renderCalendar() {
             dayEl.classList.add('attended');
         }
 
-        // [수정] 초기 페이지 로드 시 오늘 날짜에 노래가 있으면 자동 표시
+        // 초기 페이지 로드 시 오늘 날짜에 노래가 있으면 자동 표시
         if (!selectedDateStr && year === now.getFullYear() && month === now.getMonth() && d === now.getDate()) {
             dayEl.classList.add('active');
             selectedDateStr = dateStr;
@@ -446,7 +462,6 @@ function showSongs(songs) {
     const listContainer = document.getElementById("selected-song-list");
     if (!listContainer) return;
     
-    // [수정] 기존 내용을 싹 지우고 새로 그립니다.
     listContainer.innerHTML = "";
 
     if (songs.length === 0) {
