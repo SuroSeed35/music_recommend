@@ -42,24 +42,32 @@
             </button>
         </div>
 
-        <!-- 2. 기간 선택 모달 (미리보기 기능 추가됨) -->
         <div id="periodModalOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); z-index: 10000; align-items: center; justify-content: center;">
-            <div style="background: #fff; padding: 20px; border-radius: 12px; width: 85%; max-width: 340px; text-align: center; display: flex; flex-direction: column; max-height: 80vh;">
-                <h3 style="margin-top: 0; flex-shrink: 0;">기간 선택</h3>
-                <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin: 15px 0; flex-shrink: 0;">
-                    <input type="date" id="periodStartDate" style="padding: 5px; border-radius: 5px; border: 1px solid #ccc; width: 110px;">
-                    <span>~</span>
-                    <input type="date" id="periodEndDate" style="padding: 5px; border-radius: 5px; border: 1px solid #ccc; width: 110px;">
-                </div>
+            <div style="background: #fff; padding: 20px; border-radius: 16px; width: 85%; max-width: 350px; text-align: center; display: flex; flex-direction: column; max-height: 85vh; overflow-y: auto;">
+                <h3 style="margin-top: 0; margin-bottom: 15px; flex-shrink: 0; color: #111;">기간 선택</h3>
                 
-                <!-- 🔥 미리보기 곡 리스트 영역 -->
-                <div id="periodPreviewList" style="flex: 1; overflow-y: auto; text-align: left; border: 1px solid #eee; border-radius: 8px; padding: 10px; margin-bottom: 15px; display: none;">
-                    <!-- JS에서 동적으로 곡 목록이 채워집니다 -->
+                <div class="modal-calendar-wrapper">
+                    <div class="modal-calendar-header">
+                        <i id="modal-prev-month" class="fas fa-chevron-left"></i>
+                        <span id="modal-month-year" style="font-weight: 800; font-size: 15px;"></span>
+                        <i id="modal-next-month" class="fas fa-chevron-right"></i>
+                    </div>
+                    <div class="modal-weekdays">
+                        <div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div>
+                    </div>
+                    <div id="modal-calendar-grid" class="modal-calendar-grid"></div>
                 </div>
 
-                <div style="display: flex; gap: 10px; flex-shrink: 0;">
-                    <button id="periodCancelBtn" style="flex: 1; padding: 10px; border: none; border-radius: 8px; background: #eee; cursor: pointer; font-weight: bold;">취소</button>
-                    <button id="periodPlayBtn" style="flex: 1; padding: 10px; border: none; border-radius: 8px; background: #fdd835; cursor: pointer; font-weight: bold;">재생</button>
+                <div id="modal-selected-range" style="font-size: 13px; font-weight: 700; margin-bottom: 12px; color: #555; padding: 8px; background: #f8f9fa; border-radius: 8px;">
+                    기간을 선택해주세요
+                </div>
+                
+                <div id="periodPreviewList" style="flex: 1; text-align: left; border: 1px solid #eee; border-radius: 8px; padding: 10px; margin-bottom: 15px; display: none; min-height: 80px;">
+                </div>
+
+                <div style="display: flex; gap: 10px; flex-shrink: 0; margin-top: 5px;">
+                    <button id="periodCancelBtn" style="flex: 1; padding: 12px; border: none; border-radius: 10px; background: #eee; cursor: pointer; font-weight: bold; color: #555;">취소</button>
+                    <button id="periodPlayBtn" style="flex: 1; padding: 12px; border: none; border-radius: 10px; background: #111; color: #fff; cursor: pointer; font-weight: bold;">재생</button>
                 </div>
             </div>
         </div>

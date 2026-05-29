@@ -14,10 +14,7 @@ html {
 }
 
 * {
-    /* 터치 시 발생하는 하이라이트 색상을 투명하게 설정합니다. */
     -webkit-tap-highlight-color: rgba(0, 0, 0, 0) !important;
-    
-    /* 혹시 모를 외곽선(포커스)도 방지하고 싶다면 추가하세요. */
     outline: none !important;
 }
 
@@ -218,17 +215,9 @@ html {
     transform: translateY(calc(100% - 18px));
 }
 
-.bottom-sheet.state-half {
-    transform: translateY(calc(75vh - 350px));
-}
-
-.bottom-sheet.state-full {
-    transform: translateY(0);
-}
-
-.bottom-sheet.show {
-    transform: translateY(calc(75vh - 350px));
-}
+.bottom-sheet.state-half { transform: translateY(calc(75vh - 350px)); }
+.bottom-sheet.state-full { transform: translateY(0); }
+.bottom-sheet.show { transform: translateY(calc(75vh - 350px)); }
 
 .drag-handle { 
     width: 100%; 
@@ -301,10 +290,6 @@ html {
     border-radius: 50%;
 }
 
-.group-icon-circle i {
-    font-size: 18px;
-}
-
 .icon-black { background-color: #111; color: #fff; }
 .icon-blue { background-color: #0084ff; color: #fff; }
 
@@ -332,9 +317,7 @@ html {
     overscroll-behavior: contain;
 }
 
-#real-group-list::-webkit-scrollbar {
-    display: none;
-}
+#real-group-list::-webkit-scrollbar { display: none; }
 
 /* ============================================================
    댓글 버튼 & 댓글 모달
@@ -383,9 +366,7 @@ html {
     justify-content: center !important;
     align-items: center !important;
 }
-.comment-modal-overlay.show {
-    display: flex !important;
-}
+.comment-modal-overlay.show { display: flex !important; }
 .comment-modal-box {
     width: 88%;
     max-width: 360px;
@@ -409,20 +390,8 @@ html {
     padding: 16px 20px;
     border-bottom: 1px solid #f0f0f0;
 }
-.comment-modal-title {
-    font-size: 16px;
-    font-weight: 800;
-    color: #111;
-}
-.comment-modal-close {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 18px;
-    color: #888;
-    padding: 4px 8px;
-    line-height: 1;
-}
+.comment-modal-title { font-size: 16px; font-weight: 800; color: #111; }
+.comment-modal-close { background: none; border: none; cursor: pointer; font-size: 18px; color: #888; padding: 4px 8px; line-height: 1; }
 .comment-list-area {
     flex: 1;
     overflow-y: auto;
@@ -432,89 +401,28 @@ html {
 .comment-list-area::-webkit-scrollbar { width: 4px; }
 .comment-list-area::-webkit-scrollbar-thumb { background: #ddd; border-radius: 2px; }
 
-.comment-item {
-    padding: 10px 0;
-    border-bottom: 1px solid #f5f5f5;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
+.comment-item { padding: 10px 0; border-bottom: 1px solid #f5f5f5; display: flex; flex-direction: column; gap: 4px; }
 .comment-item:last-child { border-bottom: none; }
-.comment-item-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-.comment-item-user {
-    font-size: 13px;
-    font-weight: 700;
-    color: #333;
-}
-.comment-item-time {
-    font-size: 11px;
-    color: #aaa;
-}
-.comment-item-content {
-    font-size: 14px;
-    color: #222;
-    line-height: 1.4;
-    word-break: break-all;
-}
-.comment-item-delete {
-    background: none;
-    border: none;
-    color: #c00;
-    font-size: 11px;
-    cursor: pointer;
-    padding: 2px 6px;
-    margin-left: 6px;
-}
-.comment-empty {
-    text-align: center;
-    color: #aaa;
-    font-size: 13px;
-    padding: 40px 0;
-}
+.comment-item-header { display: flex; justify-content: space-between; align-items: center; }
+.comment-item-user { font-size: 13px; font-weight: 700; color: #333; }
+.comment-item-time { font-size: 11px; color: #aaa; }
+.comment-item-content { font-size: 14px; color: #222; line-height: 1.4; word-break: break-all; }
+.comment-item-delete { background: none; border: none; color: #c00; font-size: 11px; cursor: pointer; padding: 2px 6px; margin-left: 6px; }
+.comment-empty { text-align: center; color: #aaa; font-size: 13px; padding: 40px 0; }
 
 .comment-input-area {
-    display: flex;
-    gap: 8px;
-    padding: 12px 16px;
-    border-top: 1px solid #f0f0f0;
-    background: #fafafa;
+    display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid #f0f0f0; background: #fafafa;
 }
 .comment-input-area input {
-    flex: 1;
-    border: 1px solid #e0e0e0;
-    border-radius: 20px;
-    padding: 10px 14px;
-    font-size: 14px;
-    outline: none;
-    background: #fff;
-    min-width: 0;
+    flex: 1; border: 1px solid #e0e0e0; border-radius: 20px; padding: 10px 14px; font-size: 14px; outline: none; background: #fff; min-width: 0;
 }
-.comment-input-area input:focus {
-    border-color: #999;
-}
+.comment-input-area input:focus { border-color: #999; }
 .comment-input-area button {
-    background: #000;
-    color: #fff;
-    border: none;
-    border-radius: 20px;
-    padding: 0 18px;
-    font-weight: 700;
-    font-size: 14px;
-    cursor: pointer;
-    white-space: nowrap;
+    background: #000; color: #fff; border: none; border-radius: 20px; padding: 0 18px; font-weight: 700; font-size: 14px; cursor: pointer; white-space: nowrap;
 }
-.comment-input-area button:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-}
+.comment-input-area button:disabled { background: #ccc; cursor: not-allowed; }
 
-.thumbnail-wrapper {
-    position: relative;
-}
+.thumbnail-wrapper { position: relative; }
 
 .rolling-comment {
     position: absolute;
@@ -539,7 +447,7 @@ html {
 
 /* ============================================================
    🔥 전체 재생 버튼 + 미니 플레이어 (앱 내 IFrame 재생)
-   ============================================================ */
+============================================================ */
 
 @keyframes waveGradient {
     0% { background-position: 0% 50%; }
@@ -554,305 +462,79 @@ html {
 
 /* --- 전체 재생 버튼 행 --- */
 .play-all-row {
-    flex: 0 0 auto;
-    width: 100%;
-    max-width: 400px;
-    margin: 0 auto;
-    padding: 0 16px 12px;
-    box-sizing: border-box;
-    display: flex;
-    justify-content: flex-end;
+    flex: 0 0 auto; width: 100%; max-width: 400px; margin: 0 auto; padding: 0 16px 12px; box-sizing: border-box; display: flex; justify-content: flex-end;
 }
-
 .play-all-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 9px 16px;
-    background: #111;
-    color: #fff;
-    border: none;
-    border-radius: 999px;
-    font-family: inherit;
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: -0.2px;
-    cursor: pointer;
-    /* box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); */
-    transition: transform 0.12s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+    display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; background: #111; color: #fff; border: none; border-radius: 999px; font-family: inherit; font-size: 11px; font-weight: 500; letter-spacing: -0.2px; cursor: pointer; transition: transform 0.12s ease, box-shadow 0.2s ease, opacity 0.2s ease;
 }
-
-.play-all-btn:active {
-    transform: scale(0.96);
-}
-
-.play-all-btn:disabled {
-    background: #ccc;
-    color: #fff;
-    cursor: not-allowed;
-    box-shadow: none;
-    opacity: 0.7;
-}
-
-.play-all-btn i {
-    font-size: 11px;
-    transform: translateX(-1px); 
-}
+.play-all-btn:active { transform: scale(0.96); }
+.play-all-btn:disabled { background: #ccc; color: #fff; cursor: not-allowed; box-shadow: none; opacity: 0.7; }
+.play-all-btn i { font-size: 11px; transform: translateX(-1px); }
 
 /* --- 숨겨진 YouTube IFrame 컨테이너 --- */
 #yt-player-wrapper {
-    position: fixed;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    bottom: 0;
-    left: 0;
-    opacity: 0;
-    pointer-events: none;
-    z-index: -1;
+    position: fixed; width: 1px; height: 1px; overflow: hidden; bottom: 0; left: 0; opacity: 0; pointer-events: none; z-index: -1;
 }
 
 /* --- 🔥 미니 플레이어 (자연스러운 스프링 확장/축소) --- */
 .mini-player {
-    position: fixed;
-    left: 50%;
-    bottom: 16px;
-    transform: translate(-50%, 140%);
-    width: calc(100% - 24px);
-    max-width: 380px;
-    height: 64px; /* 👈 핵심: 축소 시 고정 높이 */
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px) saturate(160%);
-    -webkit-backdrop-filter: blur(20px) saturate(160%);
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 16px;
-    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.16);
-    opacity: 0;
-    visibility: hidden;
-    
-    /* 👈 핵심: 애니메이션 대신 모든 변화에 쫀득한 스프링 트랜지션 적용 */
-    transition: all 0.5s cubic-bezier(0.32, 0.72, 0, 1);
-    z-index: 1500;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    touch-action: none;
+    position: fixed; left: 50%; bottom: 16px; transform: translate(-50%, 140%); width: calc(100% - 24px); max-width: 380px; height: 64px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px) saturate(160%); -webkit-backdrop-filter: blur(20px) saturate(160%); border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 16px; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.16); opacity: 0; visibility: hidden; transition: all 0.5s cubic-bezier(0.32, 0.72, 0, 1); z-index: 1500; display: flex; flex-direction: column; overflow: hidden; touch-action: none;
 }
-
-.mini-player.show {
-    transform: translate(-50%, 0);
-    opacity: 1;
-    visibility: visible;
-}
-
-/* 확장(풀스크린) 상태 - 자연스럽게 커짐 */
+.mini-player.show { transform: translate(-50%, 0); opacity: 1; visibility: visible; }
 .mini-player.expanded {
-    top: 0 !important;
-    left: 0 !important;
-    bottom: 0 !important;
-    right: 0 !important;
-    transform: none !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    height: 100% !important; /* 높이가 100%로 쭈욱 늘어남 */
-    border-radius: 0 !important;
-    z-index: 9999 !important; 
-    background: #ffffff;
+    top: 0 !important; left: 0 !important; bottom: 0 !important; right: 0 !important; transform: none !important; width: 100% !important; max-width: 100% !important; height: 100% !important; border-radius: 0 !important; z-index: 9999 !important; background: #ffffff;
 }
 
 /* 헤더(축소 상태 UI) */
 .mini-player-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 12px;
-    height: 64px; /* 👈 고정 높이 유지 */
-    box-sizing: border-box;
-    flex-shrink: 0;
-    cursor: pointer;
-    user-select: none;
-    background: inherit;
-    z-index: 2;
-    transition: padding 0.3s ease, height 0.3s ease;
+    display: flex; align-items: center; gap: 12px; padding: 10px 12px; height: 64px; box-sizing: border-box; flex-shrink: 0; cursor: pointer; user-select: none; background: inherit; z-index: 2; transition: padding 0.3s ease, height 0.3s ease;
 }
-
-.mini-player.expanded .mini-player-header {
-    border-bottom: 1px solid #f0f0f0;
-    height: 72px; /* 확장 시 헤더가 약간 넓어짐 */
-    padding: 16px 12px;
-}
+.mini-player.expanded .mini-player-header { border-bottom: 1px solid #f0f0f0; height: 72px; padding: 16px 12px; }
 
 /* 미니 플레이어 썸네일 */
-.mini-player-thumb {
-    flex: 0 0 auto;
-    width: 44px;
-    height: 44px;
-    border-radius: 10px;
-    overflow: hidden;
-    background: #eee;
-    position: relative;
-}
-
-.mini-player-thumb img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-}
+.mini-player-thumb { flex: 0 0 auto; width: 44px; height: 44px; border-radius: 10px; overflow: hidden; background: #eee; position: relative; }
+.mini-player-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 /* 미니 플레이어 텍스트 정보 */
-.mini-player-info {
-    flex: 1 1 auto;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.mini-player-title {
-    font-size: 13px;
-    font-weight: 700;
-    color: #111;
-    line-height: 1.3;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.mini-player-sub {
-    font-size: 11px;
-    color: #888;
-    font-weight: 500;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
+.mini-player-info { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.mini-player-title { font-size: 13px; font-weight: 700; color: #111; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mini-player-sub { font-size: 11px; color: #888; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* 미니 플레이어 컨트롤 버튼 영역 */
-.mini-player-controls {
-    flex: 0 0 auto;
-    display: flex;
-    align-items: center;
-    gap: 2px;
-}
+.mini-player-controls { flex: 0 0 auto; display: flex; align-items: center; gap: 2px; }
+.mp-btn { width: 32px; height: 32px; border: none; background: transparent; color: #222; cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: background 0.15s, transform 0.1s; padding: 0; }
+.mp-btn:active { transform: scale(0.88); background: rgba(0, 0, 0, 0.06); }
+.mp-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.mp-btn i { font-size: 13px; pointer-events: none; }
+.mp-btn-main { width: 36px; height: 36px; background: #111; color: #fff; }
+.mp-btn-main:active { background: #000; transform: scale(0.92); }
+.mp-btn-main i { font-size: 14px; }
+.mp-btn-close { margin-left: 4px; color: #999; }
 
-.mp-btn {
-    width: 32px;
-    height: 32px;
-    border: none;
-    background: transparent;
-    color: #222;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    transition: background 0.15s, transform 0.1s;
-    padding: 0;
-}
-
-.mp-btn:active {
-    transform: scale(0.88);
-    background: rgba(0, 0, 0, 0.06);
-}
-
-.mp-btn:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
-}
-
-.mp-btn i {
-    font-size: 13px;
-    pointer-events: none;
-}
-
-/* 메인(재생/일시정지) 버튼은 살짝 강조 */
-.mp-btn-main {
-    width: 36px;
-    height: 36px;
-    background: #111;
-    color: #fff;
-}
-
-.mp-btn-main:active {
-    background: #000;
-    transform: scale(0.92);
-}
-
-.mp-btn-main i {
-    font-size: 14px;
-}
-
-/* 닫기 버튼은 살짝 떨어뜨려서 영역 분리 */
-.mp-btn-close {
-    margin-left: 4px;
-    color: #999;
-}
-
-/* 모바일에서 너무 좁아지지 않도록 보호 */
 @media (max-width: 360px) {
-    .mini-player-header {
-        gap: 8px;
-        padding: 9px 10px;
-    }
-    .mini-player-thumb {
-        width: 40px;
-        height: 40px;
-    }
-    .mp-btn {
-        width: 30px;
-        height: 30px;
-    }
-    .mp-btn-main {
-        width: 34px;
-        height: 34px;
-    }
+    .mini-player-header { gap: 8px; padding: 9px 10px; }
+    .mini-player-thumb { width: 40px; height: 40px; }
+    .mp-btn { width: 30px; height: 30px; }
+    .mp-btn-main { width: 34px; height: 34px; }
 }
 
 /* 바디 (영상 + 큐 리스트) */
 .mini-player-body {
-    display: flex; /* 👈 display: none 대신 항상 켜두어 끊김 방지 */
-    flex-direction: column;
-    flex: 1;
-    overflow: hidden;
-    background: #f8f9fa;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s ease;
+    display: flex; flex-direction: column; flex: 1; overflow: hidden; background: #f8f9fa; opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
 }
-
-.mini-player.expanded .mini-player-body {
-    opacity: 1;
-    pointer-events: auto;
-    transition-delay: 0.15s; /* 창이 커진 뒤 부드럽게 내용물이 페이드인 */
-}
+.mini-player.expanded .mini-player-body { opacity: 1; pointer-events: auto; transition-delay: 0.15s; }
 
 /* 상단: 영상 영역 */
-.mp-video-container {
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    background: #000;
-    flex-shrink: 0;
-}
+.mp-video-container { width: 100%; aspect-ratio: 16 / 9; background: #000; flex-shrink: 0; }
 #yt-player { width: 100%; height: 100%; border: none; }
 
 /* 하단: 큐 리스트 영역 */
-.mp-queue-header {
-    padding: 16px 20px 8px;
-    font-size: 14px;
-    font-weight: 800;
-    color: #111;
-    background: #fff;
-}
-.mp-queue-list {
-    flex: 1;
-    overflow-y: auto;
-    padding: 0 10px 20px;
-    background: #fff;
-}
+.mp-queue-header { padding: 16px 20px 8px; font-size: 14px; font-weight: 800; color: #111; background: #fff; }
+.mp-queue-list { flex: 1; overflow-y: auto; padding: 0 10px 20px; background: #fff; }
 .mp-queue-list::-webkit-scrollbar { display: none; }
 
-/* 재생 목록 아이템 디자인 */
+
+/* 🔥 [핵심 수정] 재생 목록 아이템 반응속도 튜닝 */
 .q-item {
     display: flex;
     align-items: center;
@@ -861,14 +543,19 @@ html {
     border-radius: 12px;
     margin-bottom: 6px;
     cursor: pointer;
-    transition: background 0.2s;
+    
+    /* 기존 오류 해결: border가 생기면서 화면이 덜컥거리는 현상 방지를 위해 미리 투명 테두리 지정 */
+    border: 1px solid transparent; 
+    
+    /* 기존 오류 해결: 배경색 바뀌는 애니메이션 딜레이를 아예 없애서 즉시 팍 바뀌도록 처리 */
+    transition: transform 0.1s ease-out, background 0s, border 0s; 
 }
+
 .q-item:active { transform: scale(0.98); }
 .q-thumb { width: 40px; height: 40px; border-radius: 6px; overflow: hidden; background: #eee; flex-shrink: 0; }
 .q-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .q-info { flex: 1; display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
 
-/* 상태별 UI (미래곡 일반, 현재곡 강조, 과거곡 회색) */
 .q-title { font-size: 13px; font-weight: 600; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; }
 .q-user { font-size: 11px; color: #888; }
 
@@ -915,33 +602,6 @@ html {
     border-radius: 16px !important;
 }
 
-/* 플로팅 모드일 때 제목, 서브텍스트, 재생 버튼 등 숨기기 */
-.mini-player.floating-mode .mini-player-info,
-.mini-player.floating-mode .mini-player-controls {
-    display: none !important;
-}
-
-/* --- 플로팅 모드 (드래그 시 정사각형 썸네일 변환) --- */
-.mini-player.floating-mode {
-    width: 64px !important;
-    height: 64px !important;
-    max-width: 64px !important;
-    border-radius: 16px !important;
-    padding: 0 !important;
-    transform: none !important;
-    background: transparent !important;
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3) !important;
-}
-.mini-player.floating-mode .mini-player-header {
-    padding: 0 !important;
-    height: 100% !important;
-    width: 100% !important;
-}
-.mini-player.floating-mode .mini-player-thumb {
-    width: 100% !important;
-    height: 100% !important;
-    border-radius: 16px !important;
-}
 .mini-player.floating-mode .mini-player-info,
 .mini-player.floating-mode .mini-player-controls {
     display: none !important;

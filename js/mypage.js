@@ -511,24 +511,27 @@ async function savePlayedSong(songId) {
 // ============================================================
 // 🔥 공통 플로팅 미니 플레이어 & 전체 재생 모듈 (페이지 간 상태 유지 & 중복 재생 방지)
 // ============================================================
+// ============================================================
+// 🔥 공통 플로팅 미니 플레이어 & 전체 재생 모듈 
+// (완벽한 단일화: 어디서 누르든 0.001초 UI 변경 -> 유튜브 로딩)
+// ============================================================
 const PlayAll = (() => {
     let player = null, apiReady = false, pendingStart = false;
     let pendingTime = 0, pendingAutoplay = false;
-    let queue = [];      // 현재 진짜로 재생 중인 플레이어 큐
-    let pageQueue = [];  // 현재 보고 있는 화면(페이지)의 노래 큐
+    let queue = [];      
+    let pageQueue = [];  
     let currentIndex = -1, isPlaying = false, isExpanded = false;
     let playedSongIds = new Set();
     let isFloating = false;
+    
     let $playAllBtn, $miniPlayer, $title, $sub, $thumb, $prev, $next, $playPause, $playPauseIcon, $queueList;
     let isDragging = false, dragStartX = 0, dragStartY = 0, initialLeft = 0, initialTop = 0;
-    let isFloating = false;
 
     function extractYouTubeID(url) {
         const match = url ? url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i) : null;
         return (match && match[1].length === 11) ? match[1] : null;
     }
 
-    // 🔥 공통 토스트 알림 (모든 페이지 호환용)
     function showToastSafe(msg) {
         if (typeof showToast === 'function') {
             showToast(msg);
@@ -561,6 +564,7 @@ const PlayAll = (() => {
         };
         sessionStorage.setItem('miniPlayerState', JSON.stringify(state));
     }
+    
     window.addEventListener('beforeunload', saveState);
 
     function restoreState() {
@@ -617,9 +621,9 @@ const PlayAll = (() => {
                         else if (e.data === YT.PlayerState.PAUSED) setPlayingUI(false);
                         else if (e.data === YT.PlayerState.ENDED) {
                             if (queue[currentIndex]) {
-                                // savePlayedSong 함수는 외부에 선언되어 있어야 함
                                 if (typeof savePlayedSong === 'function') savePlayedSong(queue[currentIndex].songId);
                                 playedSongIds.add(queue[currentIndex].songId);
+                                markQueueItemAsPlayed(currentIndex); 
                             }
                             currentIndex < queue.length - 1 ? playAt(currentIndex + 1) : stopAll();
                         }
@@ -650,8 +654,7 @@ const PlayAll = (() => {
                 return;
             }
             
-            // 🔥 이미 재생 중인(혹은 일시정지 중인) 리스트가 있다면 덮어쓰지 않고 경고창 표시
-            if (queue.length > 0) {
+            if (queue.length > 0 && queue !== pageQueue) {
                 showToastSafe('삭제하고 다시 시도해주세요');
                 return;
             }
@@ -678,20 +681,58 @@ const PlayAll = (() => {
         playAt(forcePlay ? 0 : currentIndex);
     }
 
+    // 🔥 [핵심 추가 1] 어떤 버튼을 누르든 (이전/다음 아이콘, 리스트 클릭 등) UI를 즉시 변경하는 단일 함수
+    function updateUIInstantly(index) {
+        currentIndex = parseInt(index, 10);
+        
+        // 1. 플레이어 상단의 텍스트(제목, 글쓴이)와 썸네일 즉시 교체
+        renderMiniPlayer();
+
+        // 2. 재생 목록 큐의 파란색(.current) 디자인 즉시 교체 (DOM 삭제 없이 빠르게 클래스만 변경)
+        if ($queueList) {
+            const items = $queueList.querySelectorAll('.q-item');
+            if (items.length > 0) {
+                items.forEach((item, idx) => {
+                    if (idx === currentIndex) {
+                        item.classList.add('current');
+                        // 안전하게 스크롤 이동
+                        setTimeout(() => {
+                            try { item.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch(e) {}
+                        }, 10);
+                    } else {
+                        item.classList.remove('current');
+                    }
+                });
+            }
+        }
+    }
+
+    // 🔥 [핵심 추가 2] 이전/다음 아이콘 클릭 시에도 무조건 거쳐가는 핵심 실행 함수
     function playAt(index) {
         if (index < 0 || index >= queue.length) return;
-        currentIndex = index; renderMiniPlayer(); renderQueueList();
-        if (!player || typeof player.cueVideoById !== 'function') { pendingStart = true; return; }
-        try {
-            player.cueVideoById(queue[currentIndex].videoId);
-            setTimeout(() => { try { player.playVideo(); } catch(e){} }, 300);
-        } catch (e) {}
+        
+        // 1. 누르자마자 묻지도 따지지도 않고 UI부터 싹 다 바꿉니다. (아이콘 클릭 시에도 동일하게 적용)
+        updateUIInstantly(index);
+        
+        if (!player || typeof player.cueVideoById !== 'function') { 
+            pendingStart = true; 
+            return; 
+        }
+        
+        // 2. 브라우저가 변경된 UI를 화면에 확실히 그릴 수 있도록 0.05초(50ms) 기다린 후 무거운 유튜브 영상을 로딩합니다.
+        setTimeout(() => {
+            try {
+                player.cueVideoById(queue[currentIndex].videoId);
+                setTimeout(() => { try { player.playVideo(); } catch(e){} }, 300);
+            } catch (e) {}
+        }, 50);
     }
 
     function stopAll() {
         try { player && player.stopVideo(); } catch (e) {}
-        isPlaying = false; currentIndex = -1; queue = [];
-        isFloating = false; // 🔥 플로팅 초기화 추가
+        isPlaying = false; currentIndex = -1; 
+        queue = []; 
+        isFloating = false;
         sessionStorage.removeItem('miniPlayerState');
         if ($miniPlayer) {
             isExpanded = false;
@@ -724,24 +765,50 @@ const PlayAll = (() => {
         if ($prev) $prev.disabled = (currentIndex <= 0);
         if ($next) $next.disabled = (currentIndex >= queue.length - 1);
     }
+    
+    function markQueueItemAsPlayed(index) {
+        if (!$queueList) return;
+        const items = $queueList.querySelectorAll('.q-item');
+        if (items[index]) {
+            items[index].classList.add('played');
+            const titleEl = items[index].querySelector('.q-title');
+            if (titleEl && !titleEl.querySelector('.q-label-played')) {
+                titleEl.innerHTML = '<span class="q-label-played">재생 완료</span>' + titleEl.innerHTML;
+            }
+        }
+    }
 
+    // 🔥 요소가 비어있거나 완전히 바뀌었을 때만 리스트 전체를 그림
     function renderQueueList() {
         if (!$queueList || !isExpanded) return;
-        $queueList.innerHTML = '';
-        queue.forEach((item, index) => {
-            const isPlayed = playedSongIds.has(item.songId);
-            const qItem = document.createElement('div');
-            qItem.className = `q-item ${isPlayed ? 'played' : ''} ${index === currentIndex ? 'current' : ''}`;
-            qItem.innerHTML = `<div class="q-thumb"><img src="${item.thumb}" alt=""></div>
-                <div class="q-info">
-                    <div class="q-title">${isPlayed ? '<span class="q-label-played">재생 완료</span>' : ''}${item.title}</div>
-                    <div class="q-user">@${item.loginId}</div>
-                </div>`;
-            qItem.onclick = () => playAt(index);
-            $queueList.appendChild(qItem);
-        });
-        const currentEl = $queueList.querySelector('.current');
-        if (currentEl) currentEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        // 큐 배열 길이와 화면 요소 개수가 다르면 완전히 새로 그림 (최초 로드 시)
+        if ($queueList.children.length !== queue.length) {
+            $queueList.innerHTML = '';
+            
+            queue.forEach((item, index) => {
+                const isPlayed = playedSongIds.has(item.songId);
+                const qItem = document.createElement('div');
+                
+                // 처음엔 current 안 넣고 played 만 넣음
+                qItem.className = `q-item ${isPlayed ? 'played' : ''}`; 
+                
+                qItem.innerHTML = `
+                    <div class="q-thumb"><img src="${item.thumb}" alt=""></div>
+                    <div class="q-info">
+                        <div class="q-title">${isPlayed ? '<span class="q-label-played">재생 완료</span>' : ''}${item.title}</div>
+                        <div class="q-user">@${item.loginId}</div>
+                    </div>`;
+                
+                // 리스트 아이템을 클릭해도 역시 단일화된 playAt() 함수를 호출!
+                qItem.onclick = () => playAt(index);
+
+                $queueList.appendChild(qItem);
+            });
+        }
+        
+        // 요소가 이미 그려져 있든 방금 그렸든 마지막에 확실하게 UI 업데이트 함수 한방 쏴주기
+        updateUIInstantly(currentIndex);
     }
 
     function setPlayingUI(playing) {
@@ -764,6 +831,7 @@ const PlayAll = (() => {
         document.addEventListener(e.type === 'touchstart' ? 'touchmove' : 'mousemove', onDragMove, {passive: false});
         document.addEventListener(e.type === 'touchstart' ? 'touchend' : 'mouseup', onDragEnd);
     }
+
     function onDragMove(e) {
         const touch = e.touches ? e.touches[0] : e;
         const dx = touch.clientX - dragStartX; 
@@ -809,26 +877,34 @@ const PlayAll = (() => {
         isDragging = false;
     }
 
-    function stopAll() {
-        try { player && player.stopVideo(); } catch (e) {}
-        isPlaying = false; currentIndex = -1; queue = [];
-        isFloating = false; // 🔥 재생 중지 시 플로팅 상태도 초기화
-        sessionStorage.removeItem('miniPlayerState');
-        if ($miniPlayer) {
-            isExpanded = false;
-            $miniPlayer.classList.remove('expanded', 'show', 'floating-mode');
-            $miniPlayer.setAttribute('aria-hidden', 'true');
-            $miniPlayer.setAttribute('inert', '');
-            $miniPlayer.style.transform = 'translate(-50%, 0)';
-            $miniPlayer.style.left = ''; 
-            $miniPlayer.style.top = ''; 
+    function playSpecificSong(songId) {
+        const targetIndex = pageQueue.findIndex(item => item.songId === songId || item.songId == songId);
+        
+        if (targetIndex === -1) {
+            showToastSafe('이 곡을 현재 목록에서 찾을 수 없습니다.');
+            return;
         }
-    }
-    function onDragEnd(e) {
-        document.removeEventListener(e.type === 'touchend' ? 'touchmove' : 'mousemove', onDragMove);
-        document.removeEventListener(e.type === 'touchend' ? 'touchend' : 'mouseup', onDragEnd);
-        if (!isDragging) toggleExpand();
-        isDragging = false;
+
+        queue = [...pageQueue];
+        saveState();
+
+        if ($miniPlayer) {
+            $miniPlayer.classList.add('show');
+            $miniPlayer.setAttribute('aria-hidden', 'false');
+            $miniPlayer.removeAttribute('inert');
+        }
+
+        if (!apiReady || !player || typeof player.loadVideoById !== 'function') {
+            currentIndex = targetIndex;
+            pendingStart = true;
+            pendingTime = 0;
+            renderMiniPlayer();
+            setPlayingUI(true);
+            return;
+        }
+        
+        // 피드에서 썸네일을 눌렀을 때에도 이 공통 함수 실행
+        playAt(targetIndex);
     }
 
     function init() {
@@ -843,8 +919,10 @@ const PlayAll = (() => {
 
         if ($playAllBtn) $playAllBtn.onclick = () => startPlayAll(true);
         
+        // 이전/다음 버튼도 playAt을 동일하게 거치므로 즉각 반영됩니다.
         if ($prev) $prev.onclick = () => currentIndex > 0 ? playAt(currentIndex - 1) : (player && typeof player.seekTo === 'function' && player.seekTo(0, true));
         if ($next) $next.onclick = () => currentIndex < queue.length - 1 ? playAt(currentIndex + 1) : stopAll();
+        
         if ($playPause) $playPause.onclick = () => player && (player.getPlayerState() === YT.PlayerState.PLAYING ? player.pauseVideo() : player.playVideo());
         if ($close) $close.onclick = stopAll;
 
@@ -857,5 +935,45 @@ const PlayAll = (() => {
         restoreState();
     }
 
-    return { init, syncQueue, startPlayAll };
+    return { init, syncQueue, startPlayAll, playSpecificSong };
 })();
+
+// 1-1. 서버에서 내가 들은 곡 목록 가져오기
+async function fetchPlayedSongs() {
+    try {
+        const response = await fetch('../php/api.php?action=get_played_history'); 
+        if (!response.ok) throw new Error('네트워크 응답이 올바르지 않습니다.');
+        
+        const text = await response.text();
+        if (!text) return []; 
+
+        const data = JSON.parse(text); 
+        return data.playedSongs || []; 
+    } catch (error) {
+        console.error('재생 기록을 불러오는데 실패했습니다:', error);
+        return []; 
+    }
+}
+
+// 1-2. 곡 재생 완료 시 서버에 저장하기
+async function savePlayedSong(songId) {
+    try {
+        const response = await fetch('../php/api.php?action=save_played_history', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ song_id: songId })
+        });
+
+        if (response.ok) {
+            // music_list.js의 카드 UI 뿐만 아니라 플레이어 리스트 마크도 대응
+            const songCard = document.querySelector(`.song-card[data-song-id="${songId}"]`);
+            if (songCard) {
+                songCard.classList.add('played');
+                const mark = songCard.querySelector('.complete-mark');
+                if (mark) mark.style.display = 'flex'; 
+            }
+        }
+    } catch (error) {
+        console.error('재생 기록 저장 중 오류 발생:', error);
+    }
+}
