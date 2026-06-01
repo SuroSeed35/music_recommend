@@ -323,3 +323,10 @@ CREATE TABLE played_history (
     -- 동일한 유저가 같은 곡을 중복해서 저장하지 않도록 제약 조건 추가
     UNIQUE KEY unique_user_song (user_id, song_id)
 );
+
+-- 기존 멤버들은 'accepted'로 유지하고, 새로 초대받은 사람은 'pending'으로 들어갑니다.
+ALTER TABLE group_members 
+ADD COLUMN status ENUM('pending', 'accepted') DEFAULT 'pending' AFTER role;
+
+-- (선택) 기존에 이미 존재하는 그룹 멤버들의 상태를 'accepted'로 일괄 변경
+UPDATE group_members SET status = 'accepted';
