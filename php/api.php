@@ -302,8 +302,14 @@ switch ($action) {
 
     case 'get_group_members':
         $group_id = (int)$_GET['group_id'];
-        // status(수락 여부)도 함께 가져오도록 쿼리 수정
-        $res = mysqli_query($conn, "SELECT u.username, gm.status FROM group_members gm JOIN users u ON gm.user_id = u.user_id WHERE gm.group_id = $group_id");
+        // 유저의 로그인 아이디(login_id)와 프로필에 띄울 상세 정보까지 모두 조인해서 가져옵니다.
+        $sql = "SELECT u.login_id, u.username, u.bio, DATEDIFF(CURRENT_DATE, u.created_at) + 1 AS dday, 
+                       s.title as song_title, s.youtube_url, s.thumbnail_img, gm.status 
+                FROM group_members gm 
+                JOIN users u ON gm.user_id = u.user_id 
+                LEFT JOIN songs s ON u.current_song_id = s.song_id 
+                WHERE gm.group_id = $group_id";
+        $res = mysqli_query($conn, $sql);
         echo json_encode(mysqli_fetch_all($res, MYSQLI_ASSOC));
         break;
 

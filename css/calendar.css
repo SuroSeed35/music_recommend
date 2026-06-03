@@ -1,11 +1,10 @@
-/* --- 1. 기본 스타일 및 레이아웃 --- */
 html, body {
     background-color: #ffffff !important;
     margin: 0;
     padding: 0;
     width: 100%;
-    height: 100%;
-    overflow: hidden; /* 🔥 전체 페이지 스크롤 완벽 차단 */
+    min-height: 100vh; /* height 대신 최소 높이만 지정 */
+    overflow-y: auto;  /* 🔥 페이지 전체 스크롤 허용 */
 }
 
 body {
@@ -27,8 +26,8 @@ body {
     display: flex;
     flex-direction: column; 
     box-sizing: border-box; 
-    height: 100vh; /* 🔥 화면 전체 높이 사용 */
-    padding-top: 30px; /* 상단 안전 여백 */
+    min-height: 100vh; /* 🔥 콘텐츠가 길어지면 무한히 늘어나도록 변경 */
+    padding-top: 30px; 
 }
 
 /* 🔥 상단 달력과 메뉴들이 화면 위로 찌그러지지 않도록 크기 고정 */
@@ -198,13 +197,11 @@ body {
 /* --- 4. 하단 노래 리스트 카드 (🔥 스크롤 및 세로 확장) --- */
 #selected-song-list { 
     width: 100%; 
-    flex: 1; /* 🔥 남은 세로 영역을 모두 이 리스트 공간으로 확장 */
-    overflow-y: auto; /* 🔥 페이지가 아닌 이 구역만 자체적으로 스크롤 됨 */
+    /* flex: 1; 와 overflow-y: auto; 삭제 */
     padding-top: 5px;
-    padding-bottom: 120px; /* 미니 플레이어에 가려지지 않도록 여백 지정 */
+    padding-bottom: 120px; 
     position: relative;
     z-index: 1;
-    -webkit-overflow-scrolling: touch;
 }
 
 #selected-song-list::-webkit-scrollbar {
@@ -238,7 +235,7 @@ body {
     display: flex; 
     flex-direction: column; 
     justify-content: center; 
-    padding: 30px 25px; /* 카드 내부 여백 늘림 */
+    padding: 30px 15px; /* 카드 내부 여백 늘림 */
     box-sizing: border-box; 
 }
 
@@ -252,7 +249,7 @@ body {
 }
 
 /* 🔥 썸네일 세로 길이를 늘려 카드가 전체적으로 더 커 보이도록 설정 */
-.thumb-area img { width: 100%; height: 220px; object-fit: cover; display: block; }
+.thumb-area img { width: 100%; height: 200px; object-fit: cover; display: block; }
 
 .video-overlay {
     position: absolute; 

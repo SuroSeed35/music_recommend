@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // --- [1] 전역 변수 및 초기 설정 ---
     let attendanceData = []; 
     let currentDate = new Date(); 
 
@@ -10,45 +9,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const contributionGrid = document.getElementById('contributionGrid');
     const backBtn = document.getElementById("backToMain");
     const logoutBtn = document.getElementById('logout-btn');
-    // --- [모달 요소 가져오기] ---
+    
     const logoutConfirmModal = document.getElementById('logoutConfirmModal');
     const logoutCancelBtn = document.getElementById('logoutCancelBtn');
     const logoutProceedBtn = document.getElementById('logoutProceedBtn');
 
-    // --- [로그아웃 흐름 제어] ---
     if (logoutBtn) {
-        // 1. 마이페이지에서 로그아웃 버튼 클릭 시 -> 모달 띄우기
-        logoutBtn.addEventListener('click', () => {
-            logoutConfirmModal.classList.remove('hidden');
-        });
+        logoutBtn.addEventListener('click', () => logoutConfirmModal.classList.remove('hidden'));
     }
 
     if (typeof PlayAll !== 'undefined') PlayAll.init();
 
     if (logoutCancelBtn) {
-        // 2. 모달에서 '취소' 클릭 시 -> 모달 닫기
-        logoutCancelBtn.addEventListener('click', () => {
-            logoutConfirmModal.classList.add('hidden');
-        });
+        logoutCancelBtn.addEventListener('click', () => logoutConfirmModal.classList.add('hidden'));
     }
 
     if (logoutProceedBtn) {
-        // 3. 모달에서 '로그아웃' 클릭 시 -> 진짜 로그아웃 실행
         logoutProceedBtn.addEventListener('click', () => {
-            logoutConfirmModal.classList.add('hidden'); // 일단 모달 닫기
-
-            // php 서버로 통신
+            logoutConfirmModal.classList.add('hidden');
             fetch('../php/logout.php')
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'success') {
-                        // 성공 시 기존에 만들어둔 1버튼 알림 모달 사용
                         showModal("로그아웃 되었습니다.");
-                        
-                        // 모달 메시지를 읽을 수 있도록 1.2초 대기 후 로그인 창으로 자동 이동
-                        setTimeout(() => {
-                            window.location.href = 'login.html'; 
-                        }, 1200);
+                        setTimeout(() => { window.location.href = 'login.html'; }, 1200);
                     } else {
                         showModal('로그아웃 처리에 실패했습니다. 다시 시도해 주세요.');
                     }
@@ -61,70 +45,63 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     if (backBtn) {
-        backBtn.onclick = () => {
-            // 프로젝트 구조에 맞게 메인 페이지 경로를 확인하세요.
-            location.href = "../html/music_list.html";
-        };
+        backBtn.onclick = () => { location.href = "../html/music_list.html"; };
     }
 
-    // 공통 알림 모달 표시 함수
     function showModal(msg) {
-        modalMsg.innerText = msg;
-        confirmModal.classList.remove('hidden');
+        if (modalMsg) modalMsg.innerText = msg;
+        if (confirmModal) confirmModal.classList.remove('hidden');
     }
     
-
-    // --- [2] 서버 데이터 로드 로직 ---
     function loadUserData() {
         fetch('../php/mypage_api.php')
             .then(res => res.json())
             .then(data => {
                 if (data.error) {
-                    console.error(data.error);
+                    if (data.error === "Unauthorized") {
+                        window.location.replace("login.html");
+                    } else {
+                        console.error(data.error);
+                    }
                     return;
                 }
                 
                 const userNameText = data.username || "이름 없음";
                 const lockIconHtml = (data.is_private == 1) ? `<img src="../img/lock.png" alt="비공개" style="width:20px; height:20px; margin-right:6px; vertical-align:middle;">` : '';
-                document.getElementById('displayId').innerHTML = `${lockIconHtml}${userNameText}`;
                 
-                // 체크박스 상태 불러오기
+                const displayIdEl = document.getElementById('displayId');
+                if (displayIdEl) {
+                    displayIdEl.innerHTML = `${lockIconHtml}<span id="pureUsername">${userNameText}</span>`;
+                }
+                
                 const privateCheckbox = document.getElementById('editPrivate');
-                if (privateCheckbox) {
-                    privateCheckbox.checked = (data.is_private == 1);
-                }
+                if (privateCheckbox) privateCheckbox.checked = (data.is_private == 1);
 
-                // 🔥 새로 추가한 로그인 아이디 매핑! (DB에 login_id가 있다면 앞쪽에 @를 붙여서 출력)
                 const displayLoginIdEl = document.getElementById('displayLoginId');
+                if (displayLoginIdEl) displayLoginIdEl.innerText = data.login_id ? `@${data.login_id}` : "@아이디 없음";
 
-                if (displayLoginIdEl) {
-                    displayLoginIdEl.innerText = data.login_id ? `@${data.login_id}` : "@아이디 없음";
-                }
+                const displayStatusEl = document.getElementById('displayStatus');
+                if (displayStatusEl) displayStatusEl.innerText = data.bio || "소개글이 없습니다.";
 
-                document.getElementById('displayStatus').innerText = data.bio || "소개글이 없습니다.";
-
-                // 디데이 매핑
                 const ddayText = document.querySelector('.dday-text');
-                if (ddayText) {
-                    ddayText.innerText = data.dday ? `D+${data.dday}` : "D+1";
-                }
+                if (ddayText) ddayText.innerText = data.dday ? `D+${data.dday}` : "D+1";
 
-                // 노래 정보 매핑 (오늘 데이터)
                 if (data.youtube_url) { 
-                    document.getElementById('recommendMsg').innerText = data.daily_comment || "작성된 한 줄 소감이 없습니다.";
-                    document.getElementById('youtubeUrl').value = data.youtube_url;
+                    const recMsg = document.getElementById('recommendMsg');
+                    if (recMsg) recMsg.innerText = data.daily_comment || "작성된 한 줄 소감이 없습니다.";
+                    
+                    const ytUrl = document.getElementById('youtubeUrl');
+                    if (ytUrl) ytUrl.value = data.youtube_url;
 
                     updatePencilVisibility(true, true);
                     
-                    if (document.getElementById('videoLink')) {
-                        document.getElementById('videoLink').href = data.youtube_url;
-                    }
-                    if (document.getElementById('thumbImg') && data.thumbnail_img) {
-                        document.getElementById('thumbImg').src = data.thumbnail_img;
-                    }
+                    const vLink = document.getElementById('videoLink');
+                    if (vLink) vLink.href = data.youtube_url;
+                    
+                    const tImg = document.getElementById('thumbImg');
+                    if (tImg && data.thumbnail_img) tImg.src = data.thumbnail_img;
                 }
 
-                // 서버에서 받은 출석 리스트를 변수에 담고 UI 갱신
                 if (data.attendance_list) {
                     attendanceData = data.attendance_list;
                     renderGrid(); 
@@ -134,79 +111,77 @@ document.addEventListener('DOMContentLoaded', () => {
             .catch(err => console.error("데이터 로드 에러:", err));
     }
 
-    // 초기 데이터 호출
     loadUserData();
 
-    // --- [3] 프로필 수정 및 DB 저장 로직 ---
-    // --- [3] 프로필 수정 및 DB 저장 로직 수정 ---
     const editBtn = document.getElementById('editBtn');
-const saveBtn = document.getElementById('saveBtn');
-const editModal = document.getElementById('editModal');
+    const saveBtn = document.getElementById('saveBtn');
+    const editModal = document.getElementById('editModal');
 
-const displayId = document.getElementById('displayId'); 
-const displayLoginId = document.getElementById('displayLoginId'); 
-const displayStatus = document.getElementById('displayStatus');
+    const inputUsername = document.getElementById('editUsername');
+    const inputLoginId = document.getElementById('editLoginId');
+    const inputStatus = document.getElementById('editStatus');
 
-const inputUsername = document.getElementById('editUsername');
-const inputLoginId = document.getElementById('editLoginId');
-const inputStatus = document.getElementById('editStatus');
+    if (editBtn) {
+        editBtn.onclick = () => {
+            const pureName = document.getElementById('pureUsername');
+            inputUsername.value = pureName ? pureName.innerText : (document.getElementById('displayId').innerText || '');
+            
+            const displayLoginIdEl = document.getElementById('displayLoginId');
+            inputLoginId.value = displayLoginIdEl ? displayLoginIdEl.innerText.replace('@', '') : ''; 
+            
+            const displayStatusEl = document.getElementById('displayStatus');
+            inputStatus.value = displayStatusEl ? displayStatusEl.innerText : '';
+            
+            if (editModal) editModal.classList.remove('hidden');
+        };
+    }
 
-// [수정 버튼 클릭 시] 기존 정보를 입력창에 로드
-if (editBtn) {
-    editBtn.onclick = () => {
-        inputUsername.value = displayId.innerText;
-        // @ 기호를 제외한 순수 아이디만 가져오기
-        inputLoginId.value = displayLoginId.innerText.replace('@', ''); 
-        inputStatus.value = displayStatus.innerText;
-        editModal.classList.remove('hidden');
-    };
-}
+    if (saveBtn) {
+        saveBtn.onclick = () => {
+            const updatedUsername = inputUsername.value;
+            const updatedLoginId = inputLoginId.value;
+            const updatedBio = inputStatus.value;
+            const isPrivateChecked = document.getElementById('editPrivate').checked;
 
-// [저장 버튼 클릭 시] 서버로 데이터 전송 (중복 로직 통합 버전)
-if (saveBtn) {
-    saveBtn.onclick = () => {
-        const updatedUsername = inputUsername.value;
-        const updatedLoginId = inputLoginId.value;
-        const updatedBio = inputStatus.value;
-
-        fetch('../php/mypage_update.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                username: updatedUsername,
-                login_id: updatedLoginId,
-                bio: updatedBio, // 👈 콤마 잊지 마세요!
-                is_private: document.getElementById('editPrivate').checked ? 1 : 0
+            fetch('../php/mypage_update.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: updatedUsername,
+                    login_id: updatedLoginId,
+                    bio: updatedBio, 
+                    is_private: isPrivateChecked ? 1 : 0
+                })
             })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                // 저장 성공 시 화면의 텍스트들을 즉시 갱신
-                const isPrivateChecked = document.getElementById('editPrivate').checked;
-                const newLockHtml = isPrivateChecked ? `<img src="../img/lock.png" alt="비공개" style="width:20px; height:20px; margin-right:6px; vertical-align:middle;">` : '';
-                displayId.innerHTML = `${newLockHtml}${updatedUsername}`;
-                displayLoginId.innerText = `@${updatedLoginId}`;
-                displayStatus.innerText = updatedBio;
-                
-                editModal.classList.add('hidden');
-                showModal("프로필이 변경되었습니다.");
-            } else {
-                // 중복 아이디 등 서버에서 보낸 에러 메시지 알림
-                alert(data.message || "저장에 실패했습니다."); 
-            }
-        })
-        .catch(err => {
-            console.error("저장 중 오류 발생:", err);
-            alert("서버 통신 중 오류가 발생했습니다.");
-        });
-    };
-}
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const newLockHtml = isPrivateChecked ? `<img src="../img/lock.png" alt="비공개" style="width:20px; height:20px; margin-right:6px; vertical-align:middle;">` : '';
+                    const displayIdEl = document.getElementById('displayId');
+                    if (displayIdEl) displayIdEl.innerHTML = `${newLockHtml}<span id="pureUsername">${updatedUsername}</span>`;
+                    
+                    const displayLoginIdEl = document.getElementById('displayLoginId');
+                    if (displayLoginIdEl) displayLoginIdEl.innerText = `@${updatedLoginId}`;
+                    
+                    const displayStatusEl = document.getElementById('displayStatus');
+                    if (displayStatusEl) displayStatusEl.innerText = updatedBio;
+                    
+                    if (editModal) editModal.classList.add('hidden');
+                    showModal("프로필이 변경되었습니다.");
+                } else {
+                    alert(data.message || "저장에 실패했습니다."); 
+                }
+            })
+            .catch(err => {
+                console.error("저장 중 오류 발생:", err);
+                alert("서버 통신 중 오류가 발생했습니다.");
+            });
+        };
+    }
 
-// 모달 닫기 버튼 로직
-const closeEditBtn = document.querySelector('.close-edit-x-btn');
-if (closeEditBtn) closeEditBtn.onclick = () => editModal.classList.add('hidden');
-    // --- [3-1] 오늘의 한마디 수정 로직 ---
+    const closeEditBtn = document.querySelector('.close-edit-x-btn');
+    if (closeEditBtn) closeEditBtn.onclick = () => { if (editModal) editModal.classList.add('hidden'); };
+
     const editCommentBtn = document.getElementById('editCommentBtn');
     const commentEditModal = document.getElementById('commentEditModal');
     const editCommentInput = document.getElementById('editComment');
@@ -215,31 +190,24 @@ if (closeEditBtn) closeEditBtn.onclick = () => editModal.classList.add('hidden')
     const closeCommentBtn = document.querySelector('.close-comment-x-btn');
     const recommendMsgEl = document.getElementById('recommendMsg');
 
-    // 연필 클릭 → 현재 한마디를 입력창에 채우고 모달 열기
     if (editCommentBtn) {
         editCommentBtn.onclick = () => {
             const current = recommendMsgEl ? recommendMsgEl.innerText : '';
-            // 안내 문구가 떠 있는 경우엔 빈 값으로 시작
-            const placeholderTexts = [
-                '노래 정보를 불러오는 중...',
-                '작성된 한 줄 소감이 없습니다.'
-            ];
+            const placeholderTexts = ['노래 정보를 불러오는 중...', '작성된 한 줄 소감이 없습니다.'];
             editCommentInput.value = placeholderTexts.includes(current) ? '' : current;
-            commentCharCount.innerText = `${editCommentInput.value.length} / 50자`;
-            commentEditModal.classList.remove('hidden');
+            if (commentCharCount) commentCharCount.innerText = `${editCommentInput.value.length} / 50자`;
+            if (commentEditModal) commentEditModal.classList.remove('hidden');
         };
     }
 
-    // 글자 수 카운터
-    if (editCommentInput) {
+    if (editCommentInput && commentCharCount) {
         editCommentInput.addEventListener('input', () => {
             commentCharCount.innerText = `${editCommentInput.value.length} / 50자`;
         });
     }
 
-    // 모달 닫기 (X 버튼)
     if (closeCommentBtn) {
-        closeCommentBtn.onclick = () => commentEditModal.classList.add('hidden');
+        closeCommentBtn.onclick = () => { if (commentEditModal) commentEditModal.classList.add('hidden'); };
     }
 
     if (commentEditModal) {
@@ -250,7 +218,6 @@ if (closeEditBtn) closeEditBtn.onclick = () => editModal.classList.add('hidden')
         };
     }
 
-    // 저장 버튼 → 서버 전송
     if (saveCommentBtn) {
         saveCommentBtn.onclick = () => {
             const newComment = editCommentInput.value.trim();
@@ -263,8 +230,8 @@ if (closeEditBtn) closeEditBtn.onclick = () => editModal.classList.add('hidden')
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    recommendMsgEl.innerText = newComment || "작성된 한 줄 소감이 없습니다.";
-                    commentEditModal.classList.add('hidden');
+                    if (recommendMsgEl) recommendMsgEl.innerText = newComment || "작성된 한 줄 소감이 없습니다.";
+                    if (commentEditModal) commentEditModal.classList.add('hidden');
                     showModal("오늘의 한마디가 수정되었습니다.");
                 } else {
                     alert(data.message || "수정에 실패했습니다.");
@@ -277,7 +244,6 @@ if (closeEditBtn) closeEditBtn.onclick = () => editModal.classList.add('hidden')
         };
     }
 
-    // --- [4] 잔디 그리드(기여도) 로직 ---
     function renderGrid() {
         if (!contributionGrid) return;
         contributionGrid.innerHTML = '';
@@ -323,10 +289,7 @@ if (closeEditBtn) closeEditBtn.onclick = () => editModal.classList.add('hidden')
         const scrollWrapper = document.querySelector('.scroll-wrapper');
         if (scrollWrapper) {
             setTimeout(() => {
-                scrollWrapper.scrollTo({
-                    left: scrollWrapper.scrollWidth,
-                    behavior: 'smooth' 
-                });
+                scrollWrapper.scrollTo({ left: scrollWrapper.scrollWidth, behavior: 'smooth' });
             }, 300); 
         }
     }
@@ -338,22 +301,20 @@ if (closeEditBtn) closeEditBtn.onclick = () => editModal.classList.add('hidden')
     if (ddayBanner) {
         ddayBanner.onclick = (e) => {
             if (!e.target.classList.contains('grass-box')) {
-                const isDdayHidden = ddayContent.classList.toggle('hidden');
-                const isAttendanceVisible = attendanceContent.classList.toggle('hidden');
-
-                if (!isAttendanceVisible) {
-                    const scrollWrapper = document.querySelector('.scroll-wrapper');
-                    if (scrollWrapper) {
-                        setTimeout(() => {
-                            scrollWrapper.scrollLeft = scrollWrapper.scrollWidth;
-                        }, 50); 
+                if (ddayContent) ddayContent.classList.toggle('hidden');
+                if (attendanceContent) {
+                    const isAttendanceVisible = !attendanceContent.classList.toggle('hidden');
+                    if (isAttendanceVisible) {
+                        const scrollWrapper = document.querySelector('.scroll-wrapper');
+                        if (scrollWrapper) {
+                            setTimeout(() => { scrollWrapper.scrollLeft = scrollWrapper.scrollWidth; }, 50); 
+                        }
                     }
                 }
             }
         };
     }
 
-    // --- [5] 주간 달력 로직 ---
     function renderWeek(baseDate) {
         if(!weekDaysContainer || !calendarMonth) return;
         weekDaysContainer.innerHTML = '';
@@ -397,7 +358,6 @@ if (closeEditBtn) closeEditBtn.onclick = () => editModal.classList.add('hidden')
     if (prevWeekBtn) prevWeekBtn.onclick = () => { currentDate.setDate(currentDate.getDate() - 7); renderWeek(currentDate); };
     if (nextWeekBtn) nextWeekBtn.onclick = () => { currentDate.setDate(currentDate.getDate() + 7); renderWeek(currentDate); };
 
-    // --- [6] 링크 복사 기능 ---
     const copyBtn = document.getElementById('copyBtn');
     if (copyBtn) {
         copyBtn.onclick = () => {
@@ -412,25 +372,22 @@ if (closeEditBtn) closeEditBtn.onclick = () => editModal.classList.add('hidden')
 
     const modalConfirmBtn = document.querySelector('#confirmModal .confirm-btn');
     const modalCloseX = document.querySelector('#confirmModal .close-x-btn');
-    if (modalConfirmBtn) modalConfirmBtn.onclick = () => confirmModal.classList.add('hidden');
-    if (modalCloseX) modalCloseX.onclick = () => confirmModal.classList.add('hidden');
+    if (modalConfirmBtn) modalConfirmBtn.onclick = () => { if(confirmModal) confirmModal.classList.add('hidden'); };
+    if (modalCloseX) modalCloseX.onclick = () => { if(confirmModal) confirmModal.classList.add('hidden'); };
 });
 
 function updatePencilVisibility(hasSong, isToday) {
     const penBtn = document.getElementById('editCommentBtn');
     if (!penBtn) return;
-    // 오늘 + 노래 있음 일 때만 연필 노출 (오늘 곡만 수정 가능하므로)
     penBtn.style.display = (hasSong && isToday) ? 'block' : 'none';
 }
 
-// --- [7] 특정 날짜 노래 정보 로드 함수 ---
 function loadSongForDate(dateObj) {
     const y = dateObj.getFullYear();
     const m = String(dateObj.getMonth() + 1).padStart(2, '0');
     const d = String(dateObj.getDate()).padStart(2, '0');
     const dateStr = `${y}-${m}-${d}`;
 
-    // 보고 있는 날짜가 '진짜 오늘'인지 판별
     const realToday = new Date();
     const isToday = (dateObj.toDateString() === realToday.toDateString());
 
@@ -458,7 +415,6 @@ function loadSongForDate(dateObj) {
                     emptyMsgEl.innerText = "이 날 추천한 노래가 없습니다.";
                     emptyMsgEl.style.display = 'block';
                 }
-                // 노래 없음 → 연필 숨김
                 updatePencilVisibility(false, isToday);
             } else {
                 if (emptyMsgEl) emptyMsgEl.style.display = 'none';
@@ -474,47 +430,12 @@ function loadSongForDate(dateObj) {
                 if (videoLink) videoLink.href = data.youtube_url;
                 if (thumbImg) thumbImg.src = data.thumbnail_img;
 
-                // 노래 있음 + 오늘일 때만 연필 노출
                 updatePencilVisibility(true, isToday);
             }
         })
         .catch(err => console.error("날짜별 노래 로드 에러:", err));
 }
 
-async function fetchPlayedSongs() {
-    try {
-        const response = await fetch('../php/api.php?action=get_played_history'); 
-        if (!response.ok) return [];
-        const text = await response.text();
-        return text ? (JSON.parse(text).playedSongs || []) : []; 
-    } catch (error) { return []; }
-}
-async function savePlayedSong(songId) {
-    try {
-        const response = await fetch('../php/api.php?action=save_played_history', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ song_id: songId })
-        });
-        if (response.ok) {
-            // 음악 리스트 화면에서의 체크마크 동기화
-            const songCard = document.querySelector(`.song-card[data-song-id="${songId}"]`);
-            if (songCard) {
-                songCard.classList.add('played');
-                const mark = songCard.querySelector('.complete-mark');
-                if (mark) mark.style.display = 'flex';
-            }
-        }
-    } catch (error) {}
-}
-
-// ============================================================
-// 🔥 공통 플로팅 미니 플레이어 & 전체 재생 모듈 (페이지 간 상태 유지 & 중복 재생 방지)
-// ============================================================
-// ============================================================
-// 🔥 공통 플로팅 미니 플레이어 & 전체 재생 모듈 
-// (완벽한 단일화: 어디서 누르든 0.001초 UI 변경 -> 유튜브 로딩)
-// ============================================================
 const PlayAll = (() => {
     let player = null, apiReady = false, pendingStart = false;
     let pendingTime = 0, pendingAutoplay = false;
@@ -580,15 +501,17 @@ const PlayAll = (() => {
                 pendingTime = state.currentTime || 0;
                 pendingAutoplay = state.isPlaying || false;
 
-                $miniPlayer.classList.add('show');
-                $miniPlayer.setAttribute('aria-hidden', 'false');
-                $miniPlayer.removeAttribute('inert');
+                if ($miniPlayer) {
+                    $miniPlayer.classList.add('show');
+                    $miniPlayer.setAttribute('aria-hidden', 'false');
+                    $miniPlayer.removeAttribute('inert');
 
-                if (isExpanded) {
-                    $miniPlayer.style.transition = 'none';
-                    $miniPlayer.classList.add('expanded');
-                    setTimeout(() => { $miniPlayer.style.transition = ''; }, 50);
-                    renderQueueList();
+                    if (isExpanded) {
+                        $miniPlayer.style.transition = 'none';
+                        $miniPlayer.classList.add('expanded');
+                        setTimeout(() => { $miniPlayer.style.transition = ''; }, 50);
+                        renderQueueList();
+                    }
                 }
                 renderMiniPlayer();
                 setPlayingUI(pendingAutoplay);
@@ -602,7 +525,12 @@ const PlayAll = (() => {
         try {
             player = new YT.Player('yt-player', {
                 height: '100%', width: '100%',
-                playerVars: { autoplay: 0, controls: 1, playsinline: 1 },
+                playerVars: { 
+                    autoplay: 0, 
+                    controls: 1, 
+                    playsinline: 1,
+                    origin: window.location.origin  // 🔥 브라우저 주소를 명시하여 보안 경고 해결!
+                },
                 events: {
                     onReady: () => { 
                         if (pendingStart && queue.length > 0) { 
@@ -653,27 +581,25 @@ const PlayAll = (() => {
                 showToastSafe('노래가 없습니다.');
                 return;
             }
-            
             if (queue.length > 0 && queue !== pageQueue) {
                 showToastSafe('삭제하고 다시 시도해주세요');
                 return;
             }
-
             queue = [...pageQueue];
             currentIndex = 0;
             saveState();
         }
-
         if (queue.length === 0) return;
         
         if (!forcePlay && $miniPlayer && $miniPlayer.classList.contains('show')) { 
             toggleExpand(); 
             return; 
         }
-        
-        $miniPlayer.classList.add('show');
-        $miniPlayer.setAttribute('aria-hidden', 'false');
-        $miniPlayer.removeAttribute('inert');
+        if ($miniPlayer) {
+            $miniPlayer.classList.add('show');
+            $miniPlayer.setAttribute('aria-hidden', 'false');
+            $miniPlayer.removeAttribute('inert');
+        }
 
         if (!apiReady || !player || typeof player.loadVideoById !== 'function') {
             pendingStart = true; pendingTime = 0; renderMiniPlayer(); setPlayingUI(true); return;
@@ -681,21 +607,15 @@ const PlayAll = (() => {
         playAt(forcePlay ? 0 : currentIndex);
     }
 
-    // 🔥 [핵심 추가 1] 어떤 버튼을 누르든 (이전/다음 아이콘, 리스트 클릭 등) UI를 즉시 변경하는 단일 함수
     function updateUIInstantly(index) {
         currentIndex = parseInt(index, 10);
-        
-        // 1. 플레이어 상단의 텍스트(제목, 글쓴이)와 썸네일 즉시 교체
         renderMiniPlayer();
-
-        // 2. 재생 목록 큐의 파란색(.current) 디자인 즉시 교체 (DOM 삭제 없이 빠르게 클래스만 변경)
         if ($queueList) {
             const items = $queueList.querySelectorAll('.q-item');
             if (items.length > 0) {
                 items.forEach((item, idx) => {
                     if (idx === currentIndex) {
                         item.classList.add('current');
-                        // 안전하게 스크롤 이동
                         setTimeout(() => {
                             try { item.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch(e) {}
                         }, 10);
@@ -707,19 +627,14 @@ const PlayAll = (() => {
         }
     }
 
-    // 🔥 [핵심 추가 2] 이전/다음 아이콘 클릭 시에도 무조건 거쳐가는 핵심 실행 함수
     function playAt(index) {
         if (index < 0 || index >= queue.length) return;
-        
-        // 1. 누르자마자 묻지도 따지지도 않고 UI부터 싹 다 바꿉니다. (아이콘 클릭 시에도 동일하게 적용)
         updateUIInstantly(index);
         
         if (!player || typeof player.cueVideoById !== 'function') { 
             pendingStart = true; 
             return; 
         }
-        
-        // 2. 브라우저가 변경된 UI를 화면에 확실히 그릴 수 있도록 0.05초(50ms) 기다린 후 무거운 유튜브 영상을 로딩합니다.
         setTimeout(() => {
             try {
                 player.cueVideoById(queue[currentIndex].videoId);
@@ -730,9 +645,7 @@ const PlayAll = (() => {
 
     function stopAll() {
         try { player && player.stopVideo(); } catch (e) {}
-        isPlaying = false; currentIndex = -1; 
-        queue = []; 
-        isFloating = false;
+        isPlaying = false; currentIndex = -1; queue = []; isFloating = false;
         sessionStorage.removeItem('miniPlayerState');
         if ($miniPlayer) {
             isExpanded = false;
@@ -778,36 +691,24 @@ const PlayAll = (() => {
         }
     }
 
-    // 🔥 요소가 비어있거나 완전히 바뀌었을 때만 리스트 전체를 그림
     function renderQueueList() {
         if (!$queueList || !isExpanded) return;
-
-        // 큐 배열 길이와 화면 요소 개수가 다르면 완전히 새로 그림 (최초 로드 시)
         if ($queueList.children.length !== queue.length) {
             $queueList.innerHTML = '';
-            
             queue.forEach((item, index) => {
                 const isPlayed = playedSongIds.has(item.songId);
                 const qItem = document.createElement('div');
-                
-                // 처음엔 current 안 넣고 played 만 넣음
                 qItem.className = `q-item ${isPlayed ? 'played' : ''}`; 
-                
                 qItem.innerHTML = `
                     <div class="q-thumb"><img src="${item.thumb}" alt=""></div>
                     <div class="q-info">
                         <div class="q-title">${isPlayed ? '<span class="q-label-played">재생 완료</span>' : ''}${item.title}</div>
                         <div class="q-user">@${item.loginId}</div>
                     </div>`;
-                
-                // 리스트 아이템을 클릭해도 역시 단일화된 playAt() 함수를 호출!
                 qItem.onclick = () => playAt(index);
-
                 $queueList.appendChild(qItem);
             });
         }
-        
-        // 요소가 이미 그려져 있든 방금 그렸든 마지막에 확실하게 UI 업데이트 함수 한방 쏴주기
         updateUIInstantly(currentIndex);
     }
 
@@ -842,14 +743,10 @@ const PlayAll = (() => {
             if (!isFloating) {
                 isFloating = true;
                 $miniPlayer.classList.add('floating-mode');
-                
-                dragStartX = touch.clientX;
-                dragStartY = touch.clientY;
-                initialLeft = touch.clientX - 32;
-                initialTop = touch.clientY - 32;
+                dragStartX = touch.clientX; dragStartY = touch.clientY;
+                initialLeft = touch.clientX - 32; initialTop = touch.clientY - 32;
             }
         }
-        
         if (isDragging) { 
             e.preventDefault(); 
             const currentDx = touch.clientX - dragStartX;
@@ -862,14 +759,11 @@ const PlayAll = (() => {
     function onDragEnd(e) {
         document.removeEventListener(e.type === 'touchend' ? 'touchmove' : 'mousemove', onDragMove);
         document.removeEventListener(e.type === 'touchend' ? 'touchend' : 'mouseup', onDragEnd);
-        
         if (!isDragging) {
             if (isFloating) {
                 isFloating = false;
                 $miniPlayer.classList.remove('floating-mode');
-                $miniPlayer.style.left = ''; 
-                $miniPlayer.style.top = ''; 
-                $miniPlayer.style.transform = '';
+                $miniPlayer.style.left = ''; $miniPlayer.style.top = ''; $miniPlayer.style.transform = '';
             } else {
                 toggleExpand();
             }
@@ -879,12 +773,10 @@ const PlayAll = (() => {
 
     function playSpecificSong(songId) {
         const targetIndex = pageQueue.findIndex(item => item.songId === songId || item.songId == songId);
-        
         if (targetIndex === -1) {
             showToastSafe('이 곡을 현재 목록에서 찾을 수 없습니다.');
             return;
         }
-
         queue = [...pageQueue];
         saveState();
 
@@ -896,14 +788,8 @@ const PlayAll = (() => {
 
         if (!apiReady || !player || typeof player.loadVideoById !== 'function') {
             currentIndex = targetIndex;
-            pendingStart = true;
-            pendingTime = 0;
-            renderMiniPlayer();
-            setPlayingUI(true);
-            return;
+            pendingStart = true; pendingTime = 0; renderMiniPlayer(); setPlayingUI(true); return;
         }
-        
-        // 피드에서 썸네일을 눌렀을 때에도 이 공통 함수 실행
         playAt(targetIndex);
     }
 
@@ -918,11 +804,8 @@ const PlayAll = (() => {
         $close = document.getElementById('mpCloseBtn');
 
         if ($playAllBtn) $playAllBtn.onclick = () => startPlayAll(true);
-        
-        // 이전/다음 버튼도 playAt을 동일하게 거치므로 즉각 반영됩니다.
         if ($prev) $prev.onclick = () => currentIndex > 0 ? playAt(currentIndex - 1) : (player && typeof player.seekTo === 'function' && player.seekTo(0, true));
         if ($next) $next.onclick = () => currentIndex < queue.length - 1 ? playAt(currentIndex + 1) : stopAll();
-        
         if ($playPause) $playPause.onclick = () => player && (player.getPlayerState() === YT.PlayerState.PLAYING ? player.pauseVideo() : player.playVideo());
         if ($close) $close.onclick = stopAll;
 
@@ -931,31 +814,21 @@ const PlayAll = (() => {
             $mpHeader.addEventListener('mousedown', onDragStart);
             $mpHeader.addEventListener('touchstart', onDragStart, {passive: true});
         }
-        
         restoreState();
     }
 
     return { init, syncQueue, startPlayAll, playSpecificSong };
 })();
 
-// 1-1. 서버에서 내가 들은 곡 목록 가져오기
 async function fetchPlayedSongs() {
     try {
         const response = await fetch('../php/api.php?action=get_played_history'); 
-        if (!response.ok) throw new Error('네트워크 응답이 올바르지 않습니다.');
-        
+        if (!response.ok) return [];
         const text = await response.text();
-        if (!text) return []; 
-
-        const data = JSON.parse(text); 
-        return data.playedSongs || []; 
-    } catch (error) {
-        console.error('재생 기록을 불러오는데 실패했습니다:', error);
-        return []; 
-    }
+        return text ? (JSON.parse(text).playedSongs || []) : []; 
+    } catch (error) { return []; }
 }
 
-// 1-2. 곡 재생 완료 시 서버에 저장하기
 async function savePlayedSong(songId) {
     try {
         const response = await fetch('../php/api.php?action=save_played_history', {
@@ -963,9 +836,7 @@ async function savePlayedSong(songId) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ song_id: songId })
         });
-
         if (response.ok) {
-            // music_list.js의 카드 UI 뿐만 아니라 플레이어 리스트 마크도 대응
             const songCard = document.querySelector(`.song-card[data-song-id="${songId}"]`);
             if (songCard) {
                 songCard.classList.add('played');
@@ -973,7 +844,5 @@ async function savePlayedSong(songId) {
                 if (mark) mark.style.display = 'flex'; 
             }
         }
-    } catch (error) {
-        console.error('재생 기록 저장 중 오류 발생:', error);
-    }
+    } catch (error) {}
 }

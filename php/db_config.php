@@ -1,10 +1,12 @@
 <?php
-$host = "localhost";
-$user = "blabackspace";      
+$host = "fdb1032.awardspace.net";
+$user = "4764741_blabackspace";      
 $pass = "wlthd4637@#";        
-$dbName = "blabackspace";
+$dbName = "4764741_blabackspace";
 
 $conn = mysqli_connect($host, $user, $pass, $dbName);
+date_default_timezone_set('Asia/Seoul');
+mysqli_query($conn, "SET time_zone = '+09:00'");
 
 if (!$conn) {
     die("DB 연결 실패: " . mysqli_connect_error());
