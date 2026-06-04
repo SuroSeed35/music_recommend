@@ -616,7 +616,7 @@ html {
     top: 10px;
     left: 10px;
     z-index: 15;
-    background: rgba(0, 0, 0, 0.45);
+    background: rgba(0, 0, 0, 0);
     border: none;
     border-radius: 50%;
     width: 34px;
@@ -627,7 +627,7 @@ html {
     cursor: pointer;
     transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.2s;
     color: #fff;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    /* box-shadow: 0 2px 5px rgba(0,0,0,0.2); */
 }
 
 .like-btn:active {
@@ -635,7 +635,7 @@ html {
 }
 
 .like-btn i {
-    font-size: 16px;
+    font-size: 22px;
     transition: color 0.3s, transform 0.3s;
 }
 

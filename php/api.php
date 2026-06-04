@@ -65,6 +65,7 @@ switch ($action) {
         $friends = mysqli_fetch_all($friend_res, MYSQLI_ASSOC);
 
         // 5. 피드 정보
+        // 5. 피드 정보 (수정된 쿼리: is_liked 값 추가)
         $user_info_res = mysqli_query($conn, "SELECT main_group_id FROM users WHERE user_id = $my_id");
         $user_info = mysqli_fetch_assoc($user_info_res);
         $main_group_id = $user_info['main_group_id'] ? (int)$user_info['main_group_id'] : 0;
@@ -72,7 +73,13 @@ switch ($action) {
         if ($main_group_id == 0) { $target_users_sql = "SELECT user_id, username, login_id FROM users WHERE user_id = $my_id"; }
         else { $target_users_sql = "SELECT u.user_id, u.username, u.login_id FROM group_members gm JOIN users u ON gm.user_id = u.user_id WHERE gm.group_id = $main_group_id AND gm.status = 'accepted'"; }
 
-        $feed_sql = "SELECT t.user_id, t.username, t.login_id, s.song_id, s.youtube_url, s.title, s.daily_comment, s.thumbnail_img, s.created_at, s.log_date, s.log_time, IF(t.user_id = $my_id, 1, 0) as is_me FROM ($target_users_sql) t LEFT JOIN songs s ON t.user_id = s.user_id AND DATE(s.created_at) = '$target_date' ORDER BY is_me DESC, s.created_at DESC, t.username ASC";
+        $feed_sql = "SELECT t.user_id, t.username, t.login_id, s.song_id, s.youtube_url, s.title, s.daily_comment, s.thumbnail_img, s.created_at, s.log_date, s.log_time, 
+                            IF(t.user_id = $my_id, 1, 0) as is_me,
+                            IF(sl.like_id IS NOT NULL, 1, 0) as is_liked 
+                     FROM ($target_users_sql) t 
+                     LEFT JOIN songs s ON t.user_id = s.user_id AND DATE(s.created_at) = '$target_date' 
+                     LEFT JOIN song_likes sl ON s.song_id = sl.song_id AND sl.user_id = $my_id
+                     ORDER BY is_me DESC, s.created_at DESC, t.username ASC";
         $feed_res = mysqli_query($conn, $feed_sql);
         $feed_songs = mysqli_fetch_all($feed_res, MYSQLI_ASSOC);
 
@@ -491,6 +498,28 @@ switch ($action) {
             }
         } else {
             echo json_encode(['success' => false, 'message' => '유효하지 않은 데이터']);
+        }
+        break;
+    case 'toggle_like':
+        $data = json_decode(file_get_contents('php://input'), true);
+        $song_id = (int)($data['song_id'] ?? 0);
+        
+        if ($song_id > 0) {
+            // 이미 좋아요를 눌렀는지 확인
+            $check_sql = "SELECT like_id FROM song_likes WHERE user_id = $my_id AND song_id = $song_id";
+            $res = mysqli_query($conn, $check_sql);
+            
+            if (mysqli_num_rows($res) > 0) {
+                // 이미 눌렀다면 좋아요 취소 (삭제)
+                mysqli_query($conn, "DELETE FROM song_likes WHERE user_id = $my_id AND song_id = $song_id");
+                echo json_encode(["success" => true, "liked" => false]);
+            } else {
+                // 안 눌렀다면 좋아요 추가 (삽입)
+                mysqli_query($conn, "INSERT INTO song_likes (user_id, song_id) VALUES ($my_id, $song_id)");
+                echo json_encode(["success" => true, "liked" => true]);
+            }
+        } else {
+            echo json_encode(["success" => false, "message" => "잘못된 노래 ID"]);
         }
         break;
 

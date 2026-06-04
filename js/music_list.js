@@ -162,8 +162,8 @@ function renderFeedSongs(songs, playedSongs = []) {
                     <div class="thumb-area" style="cursor: pointer; position: relative;">
                         <div class="like-shine-overlay"></div>
                         
-                        <button class="like-btn" data-song-id="${song.song_id}" aria-label="좋아요">
-                            <i class="far fa-heart"></i>
+                        <button class="like-btn ${song.is_liked == 1 ? 'liked' : ''}" data-song-id="${song.song_id}" aria-label="좋아요">
+                            <i class="${song.is_liked == 1 ? 'fas' : 'far'} fa-heart"></i>
                         </button>
 
                         <img src="${song.thumbnail_img}" alt="thumbnail" class="thumb-img" onload="if(this.naturalWidth === 120 && this.src.includes('maxresdefault')) this.src = this.src.replace('maxresdefault', 'hqdefault');" onerror="if(this.src.includes('maxresdefault')) this.src = this.src.replace('maxresdefault', 'hqdefault');">
@@ -196,11 +196,13 @@ function renderFeedSongs(songs, playedSongs = []) {
             const heartIcon = likeBtn ? likeBtn.querySelector('i') : null;
             const commentBtn = card.querySelector('.comment-btn');
 
-            const toggleLike = () => {
+            // --- 완성된 좋아요 함수 ---
+            const toggleLike = async () => {
                 if (!likeBtn) return;
-                const isLiked = likeBtn.classList.contains('liked');
+                const isCurrentlyLiked = likeBtn.classList.contains('liked');
                 
-                if (!isLiked) {
+                // 1. 화면(UI)부터 즉시 변경 (버벅임 방지)
+                if (!isCurrentlyLiked) {
                     likeBtn.classList.add('liked');
                     if (heartIcon) {
                         heartIcon.classList.remove('far'); 
@@ -212,14 +214,27 @@ function renderFeedSongs(songs, playedSongs = []) {
                             if(shineOverlay) shineOverlay.classList.remove('active');
                         }, 1500);
                     }
-                    // TODO: php API로 좋아요 데이터 전송 필요
                 } else {
                     likeBtn.classList.remove('liked');
                     if (heartIcon) {
                         heartIcon.classList.remove('fas');
                         heartIcon.classList.add('far');
                     }
-                    // TODO: php API로 좋아요 해제 데이터 전송 필요
+                }
+
+                // 2. 서버 DB에 저장 요청 
+                try {
+                    const res = await fetch('../php/api.php?action=toggle_like', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ song_id: song.song_id })
+                    });
+                    const data = await res.json();
+                    if (!data.success) {
+                        console.error("좋아요 처리 실패:", data.message);
+                    }
+                } catch (err) {
+                    console.error("좋아요 서버 통신 오류:", err);
                 }
             };
 

@@ -330,3 +330,13 @@ ADD COLUMN status ENUM('pending', 'accepted') DEFAULT 'pending' AFTER role;
 
 -- (선택) 기존에 이미 존재하는 그룹 멤버들의 상태를 'accepted'로 일괄 변경
 UPDATE group_members SET status = 'accepted';
+
+CREATE TABLE IF NOT EXISTS song_likes (
+    like_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    song_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (song_id) REFERENCES songs(song_id) ON DELETE CASCADE,
+    UNIQUE KEY unique_user_song_like (user_id, song_id) -- 한 유저가 같은 곡에 여러번 좋아요 방지
+);
