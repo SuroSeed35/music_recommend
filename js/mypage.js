@@ -529,7 +529,7 @@ const PlayAll = (() => {
                     autoplay: 0, 
                     controls: 1, 
                     playsinline: 1,
-                    origin: window.location.origin  // 🔥 브라우저 주소를 명시하여 보안 경고 해결!
+                    origin: window.location.origin
                 },
                 events: {
                     onReady: () => { 
@@ -846,3 +846,85 @@ async function savePlayedSong(songId) {
         }
     } catch (error) {}
 }
+
+// ============================================================
+// 🔥 마이페이지 - 내가 좋아요한 노래 모달 기능 (맨 아래 추가)
+// ============================================================
+document.addEventListener("DOMContentLoaded", () => {
+    const openLikedBtn = document.getElementById('openLikedModalBtn');
+    const closeLikedBtn = document.getElementById('closeLikedModalBtn');
+    const likedOverlay = document.getElementById('likedModalOverlay');
+    const likedContainer = document.getElementById('likedSongsContainer');
+
+    // 1. HTML 요소들이 정상적으로 있는지 확인
+    if (openLikedBtn && closeLikedBtn && likedOverlay) {
+        
+        // 모달 열기 버튼 클릭 시
+        openLikedBtn.addEventListener('click', () => {
+            likedOverlay.classList.add('show');
+            loadLikedSongs(); // 데이터 로드
+        });
+
+        // 모달 닫기 버튼(X) 클릭 시
+        closeLikedBtn.addEventListener('click', () => {
+            likedOverlay.classList.remove('show');
+        });
+
+        // 모달 바깥 어두운 배경 클릭 시 닫기
+        likedOverlay.addEventListener('click', (e) => {
+            if (e.target === likedOverlay) {
+                likedOverlay.classList.remove('show');
+            }
+        });
+        
+    } else {
+        console.error("❌ 좋아요 모달 관련 HTML 요소를 찾을 수 없습니다. HTML에 ID가 제대로 들어갔는지 확인해주세요.");
+    }
+
+    // 2. 서버에서 좋아요 리스트 가져와서 그리기
+    async function loadLikedSongs() {
+        if (!likedContainer) return;
+        likedContainer.innerHTML = '<div class="liked-empty">불러오는 중...</div>';
+        
+        try {
+            const res = await fetch('../php/api.php?action=get_liked_songs');
+            const data = await res.json();
+            
+            if (!data.success) {
+                likedContainer.innerHTML = '<div class="liked-empty">오류가 발생했습니다.</div>';
+                return;
+            }
+
+            if (!data.liked_songs || data.liked_songs.length === 0) {
+                likedContainer.innerHTML = '<div class="liked-empty">아직 좋아요한 노래가 없습니다.</div>';
+                return;
+            }
+
+            likedContainer.innerHTML = ''; // 초기화
+            data.liked_songs.forEach(song => {
+                const item = document.createElement('div');
+                item.className = 'liked-song-item';
+                
+                // 🌟 [수정 핵심] 리스트 누르면 해당 날짜 캘린더 페이지(calendar.html)로 점프!
+                item.onclick = () => {
+                    window.location.href = `calendar.html?date=${song.log_date}`; 
+                };
+
+                item.innerHTML = `
+                    <div class="liked-song-thumb">
+                        <img src="${song.thumbnail_img}" alt="thumb">
+                    </div>
+                    <div class="liked-song-info">
+                        <div class="liked-song-title">${song.title}</div>
+                        <div class="liked-song-date">${song.log_date.replace(/-/g, '.')}</div>
+                    </div>
+                    <div class="liked-song-recommender">@${song.recommender_id}</div>
+                `;
+                likedContainer.appendChild(item);
+            });
+        } catch (err) {
+            console.error("좋아요 목록 로드 실패:", err);
+            likedContainer.innerHTML = '<div class="liked-empty">서버와 통신할 수 없습니다.</div>';
+        }
+    }
+});

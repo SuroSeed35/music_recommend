@@ -254,7 +254,22 @@ switch ($action) {
             echo json_encode(["success" => false, "message" => "잘못된 입력값"]);
         }
         break;
-
+    
+    case 'get_liked_songs':
+        $sql = "SELECT sl.song_id, sl.created_at as liked_at, 
+                       s.title, s.thumbnail_img, s.log_date, 
+                       u.login_id as recommender_id
+                FROM song_likes sl
+                JOIN songs s ON sl.song_id = s.song_id
+                JOIN users u ON s.user_id = u.user_id
+                WHERE sl.user_id = $my_id
+                ORDER BY sl.created_at DESC";
+                
+        $res = mysqli_query($conn, $sql);
+        $liked_songs = mysqli_fetch_all($res, MYSQLI_ASSOC);
+        echo json_encode(["success" => true, "liked_songs" => $liked_songs]);
+        break;
+        
     case 'accept_group_invite':
         $data = json_decode(file_get_contents('php://input'), true);
         $group_id = (int)($data['group_id'] ?? 0);

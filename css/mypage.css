@@ -910,3 +910,97 @@ body {
 .mini-player.floating-mode .mini-player-controls {
     display: none !important;
 }
+
+/* 마이페이지 구분선 & 좋아요 버튼 박스 */
+.mypage-divider {
+    border: none;
+    border-top: 1px solid #f0f0f0;
+    margin: 20px 0;
+}
+
+.liked-box {
+    display: flex;
+    align-items: center;
+    background: #fff;
+    padding: 16px 20px;
+    border-radius: 16px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 700;
+    color: #333;
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.liked-box:active {
+    transform: scale(0.98);
+    box-shadow: 0 1px 5px rgba(0,0,0,0.05);
+}
+
+/* 좋아요 모달 */
+.liked-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+    justify-content: center;
+    align-items: center;
+}
+
+.liked-modal-overlay.show { display: flex; }
+
+.liked-modal-box {
+    width: 90%;
+    max-width: 380px;
+    max-height: 80vh;
+    background: #fff;
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.liked-modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 18px 20px; border-bottom: 1px solid #eee;
+}
+
+.liked-modal-header h3 { margin: 0; font-size: 17px; font-weight: 800; }
+.liked-modal-close { background: none; border: none; font-size: 20px; color: #888; cursor: pointer; padding: 0; }
+
+.liked-modal-body { flex: 1; overflow-y: auto; padding: 10px 20px; }
+.liked-modal-body::-webkit-scrollbar { display: none; }
+
+/* 좋아요한 곡 리스트 아이템 */
+.liked-song-item {
+    display: flex; align-items: center;
+    padding: 12px 0; border-bottom: 1px solid #f5f5f5;
+    cursor: pointer; transition: background 0.2s;
+}
+.liked-song-item:last-child { border-bottom: none; }
+.liked-song-item:active { background: #fafafa; }
+
+.liked-song-thumb {
+    width: 48px; height: 48px; border-radius: 8px; overflow: hidden;
+    background: #eee; flex-shrink: 0; margin-right: 12px;
+}
+.liked-song-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+.liked-song-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.liked-song-title { font-size: 14px; font-weight: 700; color: #222; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.liked-song-date { font-size: 11px; color: #999; font-weight: 500; }
+
+.liked-song-recommender {
+    font-size: 12px; font-weight: 600; color: #007aff;
+    background: #eef5ff; padding: 4px 8px; border-radius: 12px;
+    white-space: nowrap; margin-left: 10px; flex-shrink: 0;
+}
+
+.liked-empty { text-align: center; color: #999; padding: 40px 0; font-size: 14px; }

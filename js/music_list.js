@@ -1,4 +1,8 @@
-let currentDate = new Date();
+const urlParams = new URLSearchParams(window.location.search);
+const dateParam = urlParams.get('date');
+
+// URL에 date 파라미터가 있으면 그 날짜로, 없으면 오늘 날짜로 세팅
+let currentDate = dateParam ? new Date(dateParam) : new Date();
 let isFloating = false;
 currentDate.setHours(0, 0, 0, 0);
 

@@ -1,21 +1,32 @@
-let viewDate = new Date(); 
-let currentMonthSongs = []; // DB에서 가져온 이번 달 노래들을 저장할 전역 변수
-let selectedGroupId = 0; // 🔥 선택된 그룹 ID 기본값을 0(나)으로 설정
-let selectedDateStr = null;
+// 🌟 1. URL에서 마이페이지가 넘겨준 date 파라미터 가져오기 (?date=YYYY-MM-DD)
+const urlParams = new URLSearchParams(window.location.search);
+const paramDate = urlParams.get('date');
 
-let isPlayAllMode = false;
+// 🌟 2. 파라미터가 있으면 해당 월로 캘린더 세팅, 없으면 오늘 날짜로 세팅
+let viewDate = paramDate ? new Date(paramDate) : new Date(); 
+let currentMonthSongs = []; 
+let selectedGroupId = 0; 
+
+// 🌟 3. 파라미터가 있으면 포맷을 변환(YYYY.MM.DD)하여 달력에 '미리 선택된 날짜'로 지정
+let selectedDateStr = paramDate ? paramDate.replace(/-/g, '.') : null;
+
+// 🌟 세그먼트 모드 변수 (daily: 날짜별, period: 기간별, liked: 좋아요)
+let currentPlayMode = 'daily';
 
 // 🔥 모달 캘린더용 변수
+let modalTargetMode = 'period'; // 어떤 모드로 모달을 띄웠는지 저장 ('period' or 'liked')
 let modalViewDate = new Date();
 let rangeStartStr = null;
 let rangeEndStr = null;
 
+// ============================================================
+// [1] 상단 컨트롤 및 모달 이벤트 세팅
+// ============================================================
 document.addEventListener("DOMContentLoaded", () => {
     // 플레이어 초기화
     if (typeof PlayAll !== 'undefined') PlayAll.init();
 
-    const playAllSwitch = document.getElementById('playAllSwitch');
-    const playAllLabel = document.getElementById('playAllLabel');
+    const modeRadios = document.querySelectorAll('input[name="playMode"]');
     const playSelectedBtn = document.getElementById('playSelectedBtn');
     
     const periodModal = document.getElementById('periodModalOverlay');
@@ -23,25 +34,29 @@ document.addEventListener("DOMContentLoaded", () => {
     const periodPlayBtn = document.getElementById('periodPlayBtn');
     const periodPreviewList = document.getElementById('periodPreviewList');
 
-    // 🔥 새롭게 추가된 모달 내 화면 전환 요소들
     const modalStep1 = document.getElementById('modal-step-1');
     const modalStep2 = document.getElementById('modal-step-2');
     const periodNextBtn = document.getElementById('periodNextBtn');
     const periodBackBtn = document.getElementById('periodBackBtn');
+    
+    // 🌟 추가됨: 전체 기간 버튼
+    const selectAllPeriodBtn = document.getElementById('selectAllPeriodBtn');
 
-    // 1. 스위치 토글 이벤트
-    if (playAllSwitch) {
-        playAllSwitch.addEventListener('change', (e) => {
-            isPlayAllMode = e.target.checked;
-            playAllLabel.innerText = isPlayAllMode ? '기간 전체 듣기' : '날짜별 듣기';
+    // 1. 세그먼트 컨트롤 모드 변경 이벤트
+    if (modeRadios.length > 0) {
+        modeRadios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                if (e.target.checked) currentPlayMode = e.target.value;
+            });
         });
     }
 
     // 2. 모아듣기 버튼 클릭
     if (playSelectedBtn) {
         playSelectedBtn.addEventListener('click', async () => {
-            if (!isPlayAllMode) {
-                // [스위치 OFF] 선택된 날짜만 재생
+            
+            // [모드 1] 날짜별 듣기
+            if (currentPlayMode === 'daily') {
                 if (!selectedDateStr) {
                     alert("재생할 날짜를 먼저 캘린더에서 선택해주세요.");
                     return;
@@ -53,25 +68,25 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
                 
                 const mappedSongs = todaysSongs.map(s => ({
-                    song_id: s.songId,
-                    youtube_url: s.url,
+                    songId: s.songId,
+                    videoId: PlayAll.extractYouTubeID(s.url),
                     title: s.videoTitle,
-                    thumbnail_img: s.thumb,
-                    username: s.userName,
-                    login_id: s.loginId
+                    thumb: s.thumb,
+                    loginId: s.loginId
                 }));
                 
                 const playedSongs = await fetchPlayedSongs();
                 PlayAll.syncQueue(mappedSongs, playedSongs);
-                PlayAll.startPlayAll(true); // 무조건 재생(교체)
-            } else {
-                // [스위치 ON] 기간 선택 모달 띄우기 및 달력 초기화
+                PlayAll.startPlayAll(true); 
+
+            // [모드 2 & 3] 기간별 듣기 OR 좋아요 모아듣기 (모두 달력 모달 띄움)
+            } else if (currentPlayMode === 'period' || currentPlayMode === 'liked') {
                 if (periodModal) {
+                    modalTargetMode = currentPlayMode; // 현재 클릭한 모드 기억하기
                     modalViewDate = new Date(); // 현재 달력으로 초기화
                     rangeStartStr = null;
                     rangeEndStr = null;
                     
-                    // 초기화 시 달력 화면(STEP 1)이 보이도록 설정
                     if(modalStep1) modalStep1.style.display = 'flex';
                     if(modalStep2) modalStep2.style.display = 'none';
                     if (periodPreviewList) periodPreviewList.innerHTML = '';
@@ -90,7 +105,23 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 🔥 '다음' 버튼 누를 때 음악 리스트 불러오고 뷰 전환
+    // 🌟 4. 모달 - '전체 기간' 자동 선택 버튼
+    if (selectAllPeriodBtn) {
+        selectAllPeriodBtn.addEventListener('click', () => {
+            const today = new Date();
+            const y = today.getFullYear();
+            const m = String(today.getMonth() + 1).padStart(2, '0');
+            const d = String(today.getDate()).padStart(2, '0');
+            
+            rangeStartStr = '2024.01.01'; // 앱 최초 시작일 기준으로 넉넉히 세팅
+            rangeEndStr = `${y}.${m}.${d}`; // 오늘 날짜
+            
+            modalViewDate = new Date(); // 달력 뷰를 이번 달로 이동
+            renderModalCalendar();
+        });
+    }
+
+    // 5. 모달 - '다음' 버튼 (화면 전환 및 리스트 불러오기)
     if (periodNextBtn) {
         periodNextBtn.addEventListener('click', () => {
             if (!rangeStartStr || !rangeEndStr) {
@@ -103,7 +134,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 🔥 '뒤로' 버튼 누를 때 다시 달력으로 전환
+    // 6. 모달 - '뒤로' 버튼
     if (periodBackBtn) {
         periodBackBtn.addEventListener('click', () => {
             modalStep2.style.display = 'none';
@@ -111,7 +142,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 4. 모달 - 캘린더 월 이동 버튼
+    // 7. 모달 - 캘린더 월 이동 버튼
     const modalPrevBtn = document.getElementById("modal-prev-month");
     const modalNextBtn = document.getElementById("modal-next-month");
     
@@ -128,157 +159,34 @@ document.addEventListener("DOMContentLoaded", () => {
         };
     }
 
-    // 5. 모달 - 기간 선택 후 재생 버튼
+    // 8. 모달 - 최종 재생하기 버튼
     if (periodPlayBtn) {
         periodPlayBtn.addEventListener('click', async () => {
-            if (!rangeStartStr || !rangeEndStr) {
-                alert("시작일과 종료일을 캘린더에서 모두 선택해주세요.");
+            if (!rangeStartStr || !rangeEndStr) return;
+            
+            // loadCustomPreviewSongs에서 미리 세팅해둔 글로벌 리스트 사용
+            const songsToPlay = window.tempLoadedSongs || [];
+            if (songsToPlay.length === 0) {
+                alert("선택한 기간 내에 재생할 노래가 없습니다.");
                 return;
             }
 
+            periodModal.style.display = 'none';
+            
             try {
-                const url = `../php/fetch_period_songs.php?group_id=${selectedGroupId}&start=${rangeStartStr}&end=${rangeEndStr}`;
-                const res = await fetch(url);
-                const data = await res.json();
-
-                const periodSongs = data.songs || data;
-
-                if (!Array.isArray(periodSongs) || periodSongs.length === 0) {
-                    alert("선택한 기간 내에 추천된 노래가 없습니다.");
-                    return;
-                }
-
-                periodModal.style.display = 'none';
-                
                 const playedSongs = await fetchPlayedSongs();
-                PlayAll.syncQueue(periodSongs, playedSongs);
-                PlayAll.startPlayAll(true); // 이전 리스트 덮어쓰고 강제 재생
-
+                PlayAll.syncQueue(songsToPlay, playedSongs);
+                PlayAll.startPlayAll(true); // 덮어쓰고 강제 재생
             } catch (err) {
-                console.error("기간별 데이터 불러오기 오류:", err);
-                alert("노래 데이터를 불러오는데 실패했습니다.");
+                alert("재생 목록을 준비하는데 실패했습니다.");
             }
         });
     }
 });
 
-// 🔥 모달 내부의 커스텀 달력을 그리는 함수
-function renderModalCalendar() {
-    const grid = document.getElementById("modal-calendar-grid");
-    const headerText = document.getElementById("modal-month-year");
-    const rangeText = document.getElementById("modal-selected-range");
-    
-    if (!grid || !headerText) return;
-    
-    grid.innerHTML = "";
-    const year = modalViewDate.getFullYear();
-    const month = modalViewDate.getMonth();
-    
-    headerText.innerText = `${year}.${String(month + 1).padStart(2, '0')}`;
-
-    const firstDay = new Date(year, month, 1).getDay();
-    const lastDate = new Date(year, month + 1, 0).getDate();
-
-    // 빈칸 채우기
-    for (let i = 0; i < firstDay; i++) {
-        grid.innerHTML += `<div class="modal-day empty"></div>`;
-    }
-
-    // 날짜 그리기
-    for (let d = 1; d <= lastDate; d++) {
-        const dateStr = `${year}.${String(month + 1).padStart(2, '0')}.${String(d).padStart(2, '0')}`;
-        const dayEl = document.createElement("div");
-        dayEl.className = "modal-day";
-        dayEl.innerText = d;
-
-        // 선택 영역 색칠 로직
-        if (rangeStartStr === dateStr) {
-            dayEl.classList.add("range-start");
-        }
-        if (rangeEndStr === dateStr) {
-            dayEl.classList.add("range-end");
-        }
-        if (rangeStartStr && rangeEndStr && dateStr > rangeStartStr && dateStr < rangeEndStr) {
-            dayEl.classList.add("in-range");
-        }
-
-        // 터치 클릭 이벤트
-        dayEl.onclick = () => handleModalDayClick(dateStr);
-        grid.appendChild(dayEl);
-    }
-
-    // 상단 선택 텍스트 갱신
-    if (rangeStartStr && rangeEndStr) {
-        rangeText.innerText = `${rangeStartStr} ~ ${rangeEndStr}`;
-    } else if (rangeStartStr) {
-        rangeText.innerText = `${rangeStartStr} ~ (종료일 선택)`;
-    } else {
-        rangeText.innerText = `시작일을 선택해주세요`;
-    }
-}
-
-// 🔥 달력 날짜 클릭 시 (시작일/종료일 지정 로직)
-function handleModalDayClick(dateStr) {
-    if (!rangeStartStr || (rangeStartStr && rangeEndStr)) {
-        // 아무것도 선택 안되어 있거나, 이미 두개 다 골라져 있으면 새로 시작
-        rangeStartStr = dateStr;
-        rangeEndStr = null;
-    } else {
-        // 시작일만 선택되어 있는 상태에서 끝나는 날 선택
-        if (dateStr < rangeStartStr) {
-            // 과거를 누르면 그게 시작일이 됨
-            rangeStartStr = dateStr;
-        } else {
-            // 정상적으로 종료일 등록
-            rangeEndStr = dateStr;
-        }
-    }
-    
-    // 달력 다시 그리기 (색칠)
-    renderModalCalendar();
-    // [변경점] 여기 있던 하단 리스트 자동 표시 로직은 제거 (이제 '다음' 버튼 클릭 시 뜹니다)
-}
-
-// 🔥 지정된 기간으로 서버에서 미리보기용 노래 가져오기
-async function loadCustomPreviewSongs(start, end) {
-    const previewList = document.getElementById('periodPreviewList');
-    if (!previewList) return;
-
-    previewList.innerHTML = '<div style="text-align:center; color:#888; font-size:13px; padding:20px 0;">노래를 불러오는 중...</div>';
-
-    try {
-        const url = `../php/fetch_period_songs.php?group_id=${selectedGroupId}&start=${start}&end=${end}`;
-        const res = await fetch(url);
-        const data = await res.json();
-        const periodSongs = data.songs || data;
-
-        if (!Array.isArray(periodSongs) || periodSongs.length === 0) {
-            previewList.innerHTML = '<div style="text-align:center; color:#888; font-size:13px; padding:20px 0;">해당 기간에 추천된 노래가 없습니다.</div>';
-            return;
-        }
-
-        previewList.innerHTML = '';
-        periodSongs.forEach(song => {
-            const item = document.createElement('div');
-            item.style.cssText = 'display: flex; align-items: center; gap: 10px; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #f0f0f0;';
-            item.innerHTML = `
-                <div style="width: 45px; height: 45px; border-radius: 6px; overflow: hidden; flex-shrink: 0; background: #eee;">
-                    <img src="${song.thumbnail_img || song.thumb}" style="width: 100%; height: 100%; object-fit: cover;">
-                </div>
-                <div style="display: flex; flex-direction: column; overflow: hidden;">
-                    <span style="font-size: 13px; font-weight: 700; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${song.title || song.videoTitle}</span>
-                    <span style="font-size: 11px; color: #888;">@${song.login_id || song.loginId} · ${song.log_date || song.uploadDate}</span>
-                </div>
-            `;
-            previewList.appendChild(item);
-        });
-    } catch (err) {
-        console.error(err);
-        previewList.innerHTML = '<div style="text-align:center; color:#ff4d4f; font-size:13px; padding:20px 0;">노래를 불러오는데 실패했습니다.</div>';
-    }
-}
-
-
+// ============================================================
+// [2] 메인 캘린더 및 데이터 로드 기능
+// ============================================================
 document.addEventListener("DOMContentLoaded", async () => {
     await loadGroupCategories(); 
     fetchAndRenderCalendar(true);
@@ -331,6 +239,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 });
 
+// 달력 데이터 Fetch
 function fetchAndRenderCalendar(isInitial = false) {
     const year = viewDate.getFullYear();
     const month = viewDate.getMonth() + 1;
@@ -353,6 +262,7 @@ function fetchAndRenderCalendar(isInitial = false) {
         });
 }
 
+// 그룹 카테고리 로드
 async function loadGroupCategories() {
     const dropdown = document.getElementById("category-dropdown");
     const currentName = document.getElementById("current-category-name");
@@ -404,14 +314,13 @@ function selectCategory(groupId) {
     fetchAndRenderCalendar();
 }
 
+// 메인 달력 그리기
 function renderCalendar() {
     const grid = document.getElementById("calendar-grid");
     const headerText = document.getElementById("current-month-year");
-    const listContainer = document.getElementById("selected-song-list"); // 리스트 컨테이너
+    const listContainer = document.getElementById("selected-song-list");
     
     grid.innerHTML = ""; 
-    
-    // 달력을 새로 그릴 때 하단 리스트를 일단 비웁니다
     if (listContainer) listContainer.innerHTML = ""; 
     
     const year = viewDate.getFullYear();
@@ -438,7 +347,6 @@ function renderCalendar() {
             dayEl.classList.add('attended');
         }
 
-        // 초기 페이지 로드 시 오늘 날짜에 노래가 있으면 자동 표시
         if (!selectedDateStr && year === now.getFullYear() && month === now.getMonth() && d === now.getDate()) {
             dayEl.classList.add('active');
             selectedDateStr = dateStr;
@@ -452,12 +360,15 @@ function renderCalendar() {
             document.querySelectorAll('.day').forEach(el => el.classList.remove('active'));
             dayEl.classList.add('active');
             selectedDateStr = dateStr; 
-            showSongs(todaysSongs); // 날짜를 눌렀을 때만 리스트 갱신
+            showSongs(todaysSongs); 
         };
         grid.appendChild(dayEl);
     }
 }
 
+// ============================================================
+// 하단 리스트 렌더링 (좋아요 하트 탑재)
+// ============================================================
 function showSongs(songs) {
     const listContainer = document.getElementById("selected-song-list");
     if (!listContainer) return;
@@ -473,7 +384,6 @@ function showSongs(songs) {
         const wrapper = document.createElement("div");
         wrapper.className = "video-scroll-wrapper";
         
-        // 카드 내부에 즉각 반응 로직 적용
         const infoHtml = `
             <div class="info-area">
                 <span class="user-name" style="font-weight: bold;">${song.userName}</span>
@@ -484,7 +394,13 @@ function showSongs(songs) {
         `;
 
         wrapper.innerHTML = `
-            <div class="thumb-area" onclick="PlayAll.playSpecificSong('${song.songId}')">
+            <div class="thumb-area" style="cursor: pointer; position: relative;">
+                
+                <div class="like-shine-overlay"></div>
+                <button class="like-btn ${song.isLiked == 1 ? 'liked' : ''}" data-song-id="${song.songId}" aria-label="좋아요">
+                    <i class="${song.isLiked == 1 ? 'fas' : 'far'} fa-heart"></i>
+                </button>
+
                 <img src="${song.thumb}" alt="thumbnail">
                 <div class="video-overlay">
                     <div class="title">${song.videoTitle}</div>
@@ -494,22 +410,81 @@ function showSongs(songs) {
         `;
         
         listContainer.appendChild(wrapper);
+
+        const thumbArea = wrapper.querySelector('.thumb-area');
+        const likeBtn = wrapper.querySelector('.like-btn');
+        const shineOverlay = wrapper.querySelector('.like-shine-overlay');
+        const heartIcon = likeBtn ? likeBtn.querySelector('i') : null;
+
+        const toggleLike = async () => {
+            if (!likeBtn) return;
+            const isCurrentlyLiked = likeBtn.classList.contains('liked');
+            
+            // UI 즉시 반영
+            if (!isCurrentlyLiked) {
+                likeBtn.classList.add('liked');
+                if (heartIcon) { heartIcon.classList.remove('far'); heartIcon.classList.add('fas'); }
+                if (shineOverlay) {
+                    shineOverlay.classList.add('active');
+                    setTimeout(() => { if(shineOverlay) shineOverlay.classList.remove('active'); }, 1500);
+                }
+            } else {
+                likeBtn.classList.remove('liked');
+                if (heartIcon) { heartIcon.classList.remove('fas'); heartIcon.classList.add('far'); }
+            }
+
+            try {
+                const res = await fetch('../php/api.php?action=toggle_like', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ song_id: song.songId })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    song.isLiked = !isCurrentlyLiked ? 1 : 0; 
+                } else { 
+                    console.error("좋아요 처리 실패:", data.message); 
+                }
+            } catch (err) { console.error("서버 오류:", err); }
+        };
+
+        if (likeBtn) {
+            likeBtn.onclick = (e) => { 
+                e.stopPropagation(); 
+                toggleLike(); 
+            };
+        }
+
+        if (thumbArea) {
+            let pressTimer; 
+            let isLongPressed = false;
+            
+            const startPress = (e) => {
+                if (e.target.closest('.like-btn')) return;
+                isLongPressed = false;
+                pressTimer = setTimeout(() => { 
+                    isLongPressed = true; 
+                    toggleLike(); 
+                }, 600);
+            };
+            const cancelPress = () => clearTimeout(pressTimer);
+            
+            thumbArea.addEventListener('touchstart', startPress, { passive: true });
+            thumbArea.addEventListener('touchend', cancelPress);
+            thumbArea.addEventListener('touchcancel', cancelPress);
+            thumbArea.addEventListener('mousedown', startPress);
+            thumbArea.addEventListener('mouseup', cancelPress);
+            thumbArea.addEventListener('mouseleave', cancelPress);
+            
+            thumbArea.onclick = (e) => {
+                if (e.target.closest('.like-btn')) return;
+                if (isLongPressed) { e.preventDefault(); return; }
+                PlayAll.playSpecificSong(song.songId);
+            };
+        }
     });
 }
 
-function resetToCenter(element) {
-    const scrollLeft = element.scrollLeft;
-    const scrollWidth = element.scrollWidth;
-    const clientWidth = element.clientWidth;
-    const threshold = 60; 
-
-    if (scrollLeft > threshold) {
-        element.scrollTo({ left: scrollWidth - clientWidth, behavior: 'smooth' });
-    } else {
-        element.scrollTo({ left: 0, behavior: 'smooth' });
-    }
-}
-
+// 사이드바 이벤트
 function setupEventListeners() {
     const toggleBtn = document.getElementById('sideBarToggle');
     const content = document.getElementById('sideBarContent');
@@ -529,6 +504,153 @@ function setupEventListeners() {
 }
 
 
+// ============================================================
+// [3] 모달 달력 및 미리보기 로직
+// ============================================================
+
+function renderModalCalendar() {
+    const grid = document.getElementById("modal-calendar-grid");
+    const headerText = document.getElementById("modal-month-year");
+    const rangeText = document.getElementById("modal-selected-range");
+    
+    if (!grid || !headerText) return;
+    
+    grid.innerHTML = "";
+    const year = modalViewDate.getFullYear();
+    const month = modalViewDate.getMonth();
+    
+    headerText.innerText = `${year}.${String(month + 1).padStart(2, '0')}`;
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const lastDate = new Date(year, month + 1, 0).getDate();
+
+    for (let i = 0; i < firstDay; i++) {
+        grid.innerHTML += `<div class="modal-day empty"></div>`;
+    }
+
+    for (let d = 1; d <= lastDate; d++) {
+        const dateStr = `${year}.${String(month + 1).padStart(2, '0')}.${String(d).padStart(2, '0')}`;
+        const dayEl = document.createElement("div");
+        dayEl.className = "modal-day";
+        dayEl.innerText = d;
+
+        if (rangeStartStr === dateStr) {
+            dayEl.classList.add("range-start");
+        }
+        if (rangeEndStr === dateStr) {
+            dayEl.classList.add("range-end");
+        }
+        if (rangeStartStr && rangeEndStr && dateStr > rangeStartStr && dateStr < rangeEndStr) {
+            dayEl.classList.add("in-range");
+        }
+
+        dayEl.onclick = () => handleModalDayClick(dateStr);
+        grid.appendChild(dayEl);
+    }
+
+    if (rangeStartStr && rangeEndStr) {
+        rangeText.innerText = `${rangeStartStr} ~ ${rangeEndStr}`;
+    } else if (rangeStartStr) {
+        rangeText.innerText = `${rangeStartStr} ~ (종료일 선택)`;
+    } else {
+        rangeText.innerText = `기간을 선택해주세요`;
+    }
+}
+
+function handleModalDayClick(dateStr) {
+    if (!rangeStartStr || (rangeStartStr && rangeEndStr)) {
+        rangeStartStr = dateStr;
+        rangeEndStr = null;
+    } else {
+        if (dateStr < rangeStartStr) {
+            rangeStartStr = dateStr;
+        } else {
+            rangeEndStr = dateStr;
+        }
+    }
+    renderModalCalendar();
+}
+
+async function loadCustomPreviewSongs(start, end) {
+    const previewList = document.getElementById('periodPreviewList');
+    if (!previewList) return;
+
+    previewList.innerHTML = '<div style="text-align:center; color:#888; font-size:13px; padding:20px 0;">노래를 불러오는 중...</div>';
+    
+    // 글로벌 큐에 임시 저장할 배열
+    window.tempLoadedSongs = [];
+
+    try {
+        let rawSongs = [];
+
+        // 1) 기간별 모드일 때
+        if (modalTargetMode === 'period') {
+            const url = `../php/fetch_period_songs.php?group_id=${selectedGroupId}&start=${start}&end=${end}`;
+            const res = await fetch(url);
+            const data = await res.json();
+            rawSongs = data.songs || data;
+
+        // 2) 좋아요 모드일 때 (전체 좋아요 리스트를 불러와서 클라이언트 단에서 날짜로 자르기)
+        } else if (modalTargetMode === 'liked') {
+            const res = await fetch('../php/api.php?action=get_liked_songs');
+            const data = await res.json();
+            if (data.success && data.liked_songs) {
+                // 지정된 날짜 사이에 있는 좋아요 곡만 남기기
+                rawSongs = data.liked_songs.filter(s => {
+                    const d = s.log_date.replace(/-/g, '.');
+                    return d >= start && d <= end;
+                }).map(s => {
+                    // 🔥 썸네일 URL (https://img.youtube.com/vi/영상ID/0.jpg)에서 11자리 비디오 ID 직접 추출
+                    let extractedId = null;
+                    if (s.thumbnail_img && s.thumbnail_img.includes('/vi/')) {
+                        extractedId = s.thumbnail_img.split('/vi/')[1].substring(0, 11);
+                    }
+                    
+                    return {
+                        songId: s.song_id,
+                        videoId: extractedId, // 🌟 제대로 된 영상 ID를 넣어줍니다
+                        videoTitle: s.title,
+                        thumb: s.thumbnail_img,
+                        loginId: s.recommender_id,
+                        uploadDate: s.log_date.replace(/-/g, '.')
+                    };
+                });
+            }
+        }
+
+        if (!Array.isArray(rawSongs) || rawSongs.length === 0) {
+            previewList.innerHTML = '<div style="text-align:center; color:#888; font-size:13px; padding:20px 0;">해당 기간에 포함된 노래가 없습니다.</div>';
+            return;
+        }
+
+        window.tempLoadedSongs = rawSongs; // 최종 큐 등록용으로 저장
+
+        previewList.innerHTML = '';
+        rawSongs.forEach(song => {
+            const item = document.createElement('div');
+            item.style.cssText = 'display: flex; align-items: center; gap: 10px; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #f0f0f0;';
+            item.innerHTML = `
+                <div style="width: 45px; height: 45px; border-radius: 6px; overflow: hidden; flex-shrink: 0; background: #eee;">
+                    <img src="${song.thumbnail_img || song.thumb}" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+                <div style="display: flex; flex-direction: column; overflow: hidden;">
+                    <span style="font-size: 13px; font-weight: 700; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${song.title || song.videoTitle}</span>
+                    <span style="font-size: 11px; color: #888;">@${song.login_id || song.loginId} · ${song.log_date || song.uploadDate}</span>
+                </div>
+            `;
+            previewList.appendChild(item);
+        });
+    } catch (err) {
+        console.error(err);
+        previewList.innerHTML = '<div style="text-align:center; color:#ff4d4f; font-size:13px; padding:20px 0;">노래를 불러오는데 실패했습니다.</div>';
+    }
+}
+
+
+// ============================================================
+// [4] 서버 재생기록 연동 및 PlayAll 모듈
+// ============================================================
+
 async function fetchPlayedSongs() {
     try {
         const response = await fetch('../php/api.php?action=get_played_history'); 
@@ -547,10 +669,6 @@ async function savePlayedSong(songId) {
     } catch (error) {}
 }
 
-// ============================================================
-// 🔥 공통 플로팅 미니 플레이어 & 전체 재생 모듈 
-// (완벽한 단일화: 어디서 누르든 0.001초 UI 변경 -> 유튜브 로딩)
-// ============================================================
 const PlayAll = (() => {
     let player = null, apiReady = false, pendingStart = false;
     let pendingTime = 0, pendingAutoplay = false;
@@ -563,6 +681,7 @@ const PlayAll = (() => {
     let $playAllBtn, $miniPlayer, $title, $sub, $thumb, $prev, $next, $playPause, $playPauseIcon, $queueList;
     let isDragging = false, dragStartX = 0, dragStartY = 0, initialLeft = 0, initialTop = 0;
 
+    // 🌟 URL에서 비디오 아이디 추출 (외부 호출 가능하도록 세팅)
     function extractYouTubeID(url) {
         const match = url ? url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i) : null;
         return (match && match[1].length === 11) ? match[1] : null;
@@ -616,15 +735,17 @@ const PlayAll = (() => {
                 pendingTime = state.currentTime || 0;
                 pendingAutoplay = state.isPlaying || false;
 
-                $miniPlayer.classList.add('show');
-                $miniPlayer.setAttribute('aria-hidden', 'false');
-                $miniPlayer.removeAttribute('inert');
+                if ($miniPlayer) {
+                    $miniPlayer.classList.add('show');
+                    $miniPlayer.setAttribute('aria-hidden', 'false');
+                    $miniPlayer.removeAttribute('inert');
 
-                if (isExpanded) {
-                    $miniPlayer.style.transition = 'none';
-                    $miniPlayer.classList.add('expanded');
-                    setTimeout(() => { $miniPlayer.style.transition = ''; }, 50);
-                    renderQueueList();
+                    if (isExpanded) {
+                        $miniPlayer.style.transition = 'none';
+                        $miniPlayer.classList.add('expanded');
+                        setTimeout(() => { $miniPlayer.style.transition = ''; }, 50);
+                        renderQueueList();
+                    }
                 }
                 renderMiniPlayer();
                 setPlayingUI(pendingAutoplay);
@@ -638,7 +759,12 @@ const PlayAll = (() => {
         try {
             player = new YT.Player('yt-player', {
                 height: '100%', width: '100%',
-                playerVars: { autoplay: 0, controls: 1, playsinline: 1 },
+                playerVars: { 
+                    autoplay: 0, 
+                    controls: 1, 
+                    playsinline: 1,
+                    origin: window.location.origin
+                },
                 events: {
                     onReady: () => { 
                         if (pendingStart && queue.length > 0) { 
@@ -673,7 +799,7 @@ const PlayAll = (() => {
         playedSongIds = new Set(pSongs);
         pageQueue = (songs || []).map(s => ({
             songId: s.song_id || s.songId, 
-            videoId: extractYouTubeID(s.youtube_url || s.url),
+            videoId: s.videoId || extractYouTubeID(s.youtube_url || s.url), 
             title: s.title || s.videoTitle || '제목 없음', 
             thumb: s.thumbnail_img || s.thumb || '', 
             loginId: s.login_id || s.loginId || s.username
@@ -689,12 +815,9 @@ const PlayAll = (() => {
                 showToastSafe('노래가 없습니다.');
                 return;
             }
-            
             if (queue.length > 0 && queue !== pageQueue) {
-                showToastSafe('삭제하고 다시 시도해주세요');
-                return;
+                showToastSafe('리스트가 갱신되었습니다.');
             }
-
             queue = [...pageQueue];
             currentIndex = 0;
             saveState();
@@ -707,9 +830,11 @@ const PlayAll = (() => {
             return; 
         }
         
-        $miniPlayer.classList.add('show');
-        $miniPlayer.setAttribute('aria-hidden', 'false');
-        $miniPlayer.removeAttribute('inert');
+        if ($miniPlayer) {
+            $miniPlayer.classList.add('show');
+            $miniPlayer.setAttribute('aria-hidden', 'false');
+            $miniPlayer.removeAttribute('inert');
+        }
 
         if (!apiReady || !player || typeof player.loadVideoById !== 'function') {
             pendingStart = true; pendingTime = 0; renderMiniPlayer(); setPlayingUI(true); return;
@@ -956,5 +1081,5 @@ const PlayAll = (() => {
         restoreState();
     }
 
-    return { init, syncQueue, startPlayAll, playSpecificSong };
+    return { init, syncQueue, startPlayAll, playSpecificSong, extractYouTubeID };
 })();
