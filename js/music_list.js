@@ -156,9 +156,16 @@ function renderFeedSongs(songs, playedSongs = []) {
                 card.classList.add('played'); 
             }
 
+            // --- 🔥 HTML 템플릿 영역에 좋아요 오버레이와 버튼 추가 ---
             card.innerHTML = `
                 <div class="song-scroll-wrapper">
                     <div class="thumb-area" style="cursor: pointer; position: relative;">
+                        <div class="like-shine-overlay"></div>
+                        
+                        <button class="like-btn" data-song-id="${song.song_id}" aria-label="좋아요">
+                            <i class="far fa-heart"></i>
+                        </button>
+
                         <img src="${song.thumbnail_img}" alt="thumbnail" class="thumb-img" onload="if(this.naturalWidth === 120 && this.src.includes('maxresdefault')) this.src = this.src.replace('maxresdefault', 'hqdefault');" onerror="if(this.src.includes('maxresdefault')) this.src = this.src.replace('maxresdefault', 'hqdefault');">
                         
                         <div class="complete-mark" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 12px; display: ${isPlayed ? 'flex' : 'none'}; align-items: center; gap: 4px; z-index: 10; pointer-events: none;">
@@ -182,20 +189,89 @@ function renderFeedSongs(songs, playedSongs = []) {
                 </div>
             `;
             
+            // --- 🔥 좋아요 & 꾹 누르기 이벤트 바인딩 추가 ---
             const thumbArea = card.querySelector('.thumb-area');
+            const likeBtn = card.querySelector('.like-btn');
+            const shineOverlay = card.querySelector('.like-shine-overlay');
+            const heartIcon = likeBtn ? likeBtn.querySelector('i') : null;
+            const commentBtn = card.querySelector('.comment-btn');
+
+            const toggleLike = () => {
+                if (!likeBtn) return;
+                const isLiked = likeBtn.classList.contains('liked');
+                
+                if (!isLiked) {
+                    likeBtn.classList.add('liked');
+                    if (heartIcon) {
+                        heartIcon.classList.remove('far'); 
+                        heartIcon.classList.add('fas');    
+                    }
+                    if (shineOverlay) {
+                        shineOverlay.classList.add('active');
+                        setTimeout(() => {
+                            if(shineOverlay) shineOverlay.classList.remove('active');
+                        }, 1500);
+                    }
+                    // TODO: php API로 좋아요 데이터 전송 필요
+                } else {
+                    likeBtn.classList.remove('liked');
+                    if (heartIcon) {
+                        heartIcon.classList.remove('fas');
+                        heartIcon.classList.add('far');
+                    }
+                    // TODO: php API로 좋아요 해제 데이터 전송 필요
+                }
+            };
+
+            if (likeBtn) {
+                likeBtn.onclick = (e) => {
+                    e.stopPropagation(); 
+                    toggleLike();
+                };
+            }
+
             if (thumbArea && song.youtube_url) {
-                thumbArea.onclick = () => {
+                let pressTimer;
+                let isLongPressed = false;
+
+                const startPress = (e) => {
+                    if (e.target.closest('.like-btn')) return;
+                    isLongPressed = false; 
+                    pressTimer = setTimeout(() => {
+                        isLongPressed = true; 
+                        toggleLike();         
+                    }, 600); 
+                };
+
+                const cancelPress = () => {
+                    clearTimeout(pressTimer);
+                };
+
+                thumbArea.addEventListener('touchstart', startPress, { passive: true });
+                thumbArea.addEventListener('touchend', cancelPress);
+                thumbArea.addEventListener('touchcancel', cancelPress);
+                
+                thumbArea.addEventListener('mousedown', startPress);
+                thumbArea.addEventListener('mouseup', cancelPress);
+                thumbArea.addEventListener('mouseleave', cancelPress);
+
+                thumbArea.onclick = (e) => {
+                    if (e.target.closest('.like-btn')) return; 
+                    if (isLongPressed) {
+                        e.preventDefault();
+                        return;
+                    }
                     PlayAll.playSpecificSong(song.song_id);
                 };
             }
 
-            const commentBtn = card.querySelector('.comment-btn');
             if (commentBtn) {
                 commentBtn.onclick = (e) => {
                     e.stopPropagation();
                     openCommentModal(song.song_id);
                 };
             }
+
         } else {
             card.innerHTML = `
                 <div class="song-scroll-wrapper">
