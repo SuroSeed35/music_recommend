@@ -792,7 +792,6 @@ async function startRollingComments(songId) {
 
 // ============================================================
 // 🔥 공통 플로팅 미니 플레이어 & 전체 재생 모듈 
-// (완벽한 단일화: 어디서 누르든 0.001초 UI 변경 -> 유튜브 로딩)
 // ============================================================
 const PlayAll = (() => {
     let player = null, apiReady = false, pendingStart = false;
@@ -801,7 +800,6 @@ const PlayAll = (() => {
     let pageQueue = [];  
     let currentIndex = -1, isPlaying = false, isExpanded = false;
     let playedSongIds = new Set();
-    let isFloating = false;
     
     let $playAllBtn, $miniPlayer, $title, $sub, $thumb, $prev, $next, $playPause, $playPauseIcon, $queueList;
     let isDragging = false, dragStartX = 0, dragStartY = 0, initialLeft = 0, initialTop = 0;
@@ -876,19 +874,27 @@ const PlayAll = (() => {
         } catch(e) {}
     }
 
+    // 🌟 PC/서버 버그 완벽 수정: JS가 이벤트를 뺏기지 않도록 설정 최적화
     window.onYouTubeIframeAPIReady = function() {
         apiReady = true;
         try {
             player = new YT.Player('yt-player', {
-                height: '100%', width: '100%',
-                playerVars: { autoplay: 0, controls: 1, playsinline: 1 },
+                host: 'https://www.youtube.com', // 🌟 어워드스페이스 접속용
+                height: '100%', 
+                width: '100%',
+                playerVars: { 
+                    autoplay: 1, // 🌟 즉시 실행 허용
+                    controls: 1, 
+                    playsinline: 1,
+                    origin: window.location.origin // 🌟 크로스 도메인 재생 차단 방지
+                },
                 events: {
-                    onReady: () => { 
+                    onReady: () => {
                         if (pendingStart && queue.length > 0) { 
                             pendingStart = false; 
                             if (pendingTime > 0) {
-                                player.cueVideoById(queue[currentIndex].videoId, pendingTime);
-                                if (pendingAutoplay) setTimeout(() => { try { player.playVideo(); } catch(e){} }, 300);
+                                // 신형 명령어: 바로 시작 지점 지정 후 재생
+                                player.loadVideoById({videoId: queue[currentIndex].videoId, startSeconds: pendingTime});
                                 pendingTime = 0;
                             } else {
                                 playAt(currentIndex >= 0 ? currentIndex : 0); 
@@ -909,7 +915,9 @@ const PlayAll = (() => {
                     }
                 }
             });
-        } catch (e) {}
+        } catch (e) {
+            console.error("유튜브 플레이어 초기화 에러:", e);
+        }
     };
 
     function syncQueue(songs, pSongs = []) {
@@ -932,12 +940,10 @@ const PlayAll = (() => {
                 showToastSafe('노래가 없습니다.');
                 return;
             }
-            
             if (queue.length > 0 && queue !== pageQueue) {
                 showToastSafe('삭제하고 다시 시도해주세요');
                 return;
             }
-
             queue = [...pageQueue];
             currentIndex = 0;
             saveState();
@@ -945,14 +951,15 @@ const PlayAll = (() => {
 
         if (queue.length === 0) return;
         
-        if (!forcePlay && $miniPlayer && $miniPlayer.classList.contains('show')) { 
-            toggleExpand(); 
-            return; 
-        }
-        
+        // 🔥 항상 플레이어를 화면에 띄웁니다.
         $miniPlayer.classList.add('show');
         $miniPlayer.setAttribute('aria-hidden', 'false');
         $miniPlayer.removeAttribute('inert');
+        
+        // 🚨 무조건 플레이어를 위로 확장시켜서 브라우저의 재생 차단을 원천 방지
+        if (!isExpanded) {
+            toggleExpand(); 
+        }
 
         if (!apiReady || !player || typeof player.loadVideoById !== 'function') {
             pendingStart = true; pendingTime = 0; renderMiniPlayer(); setPlayingUI(true); return;
@@ -960,21 +967,15 @@ const PlayAll = (() => {
         playAt(forcePlay ? 0 : currentIndex);
     }
 
-    // 🔥 [핵심 추가 1] 어떤 버튼을 누르든 (이전/다음 아이콘, 리스트 클릭 등) UI를 즉시 변경하는 단일 함수
     function updateUIInstantly(index) {
         currentIndex = parseInt(index, 10);
-        
-        // 1. 플레이어 상단의 텍스트(제목, 글쓴이)와 썸네일 즉시 교체
         renderMiniPlayer();
-
-        // 2. 재생 목록 큐의 파란색(.current) 디자인 즉시 교체 (DOM 삭제 없이 빠르게 클래스만 변경)
         if ($queueList) {
             const items = $queueList.querySelectorAll('.q-item');
             if (items.length > 0) {
                 items.forEach((item, idx) => {
                     if (idx === currentIndex) {
                         item.classList.add('current');
-                        // 안전하게 스크롤 이동
                         setTimeout(() => {
                             try { item.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch(e) {}
                         }, 10);
@@ -986,25 +987,23 @@ const PlayAll = (() => {
         }
     }
 
-    // 🔥 [핵심 추가 2] 이전/다음 아이콘 클릭 시에도 무조건 거쳐가는 핵심 실행 함수
+    // 🔥 딜레이를 완벽히 제거한 즉시 재생 함수
     function playAt(index) {
         if (index < 0 || index >= queue.length) return;
         
-        // 1. 누르자마자 묻지도 따지지도 않고 UI부터 싹 다 바꿉니다. (아이콘 클릭 시에도 동일하게 적용)
         updateUIInstantly(index);
         
-        if (!player || typeof player.cueVideoById !== 'function') { 
+        if (!player || typeof player.loadVideoById !== 'function') { 
             pendingStart = true; 
             return; 
         }
         
-        // 2. 브라우저가 변경된 UI를 화면에 확실히 그릴 수 있도록 0.05초(50ms) 기다린 후 무거운 유튜브 영상을 로딩합니다.
-        setTimeout(() => {
-            try {
-                player.cueVideoById(queue[currentIndex].videoId);
-                setTimeout(() => { try { player.playVideo(); } catch(e){} }, 300);
-            } catch (e) {}
-        }, 50);
+        try {
+            // setTimeout 같은 눈속임 없이 바로 쏴줘야 컴퓨터와 스마트폰 모두 안 막힙니다.
+            player.loadVideoById(queue[currentIndex].videoId);
+        } catch (e) {
+            console.error("유튜브 재생 에러:", e);
+        }
     }
 
     function stopAll() {
@@ -1057,19 +1056,14 @@ const PlayAll = (() => {
         }
     }
 
-    // 🔥 요소가 비어있거나 완전히 바뀌었을 때만 리스트 전체를 그림
     function renderQueueList() {
         if (!$queueList || !isExpanded) return;
 
-        // 큐 배열 길이와 화면 요소 개수가 다르면 완전히 새로 그림 (최초 로드 시)
         if ($queueList.children.length !== queue.length) {
             $queueList.innerHTML = '';
-            
             queue.forEach((item, index) => {
                 const isPlayed = playedSongIds.has(item.songId);
                 const qItem = document.createElement('div');
-                
-                // 처음엔 current 안 넣고 played 만 넣음
                 qItem.className = `q-item ${isPlayed ? 'played' : ''}`; 
                 
                 qItem.innerHTML = `
@@ -1079,14 +1073,10 @@ const PlayAll = (() => {
                         <div class="q-user">@${item.loginId}</div>
                     </div>`;
                 
-                // 리스트 아이템을 클릭해도 역시 단일화된 playAt() 함수를 호출!
                 qItem.onclick = () => playAt(index);
-
                 $queueList.appendChild(qItem);
             });
         }
-        
-        // 요소가 이미 그려져 있든 방금 그렸든 마지막에 확실하게 UI 업데이트 함수 한방 쏴주기
         updateUIInstantly(currentIndex);
     }
 
@@ -1121,7 +1111,6 @@ const PlayAll = (() => {
             if (!isFloating) {
                 isFloating = true;
                 $miniPlayer.classList.add('floating-mode');
-                
                 dragStartX = touch.clientX;
                 dragStartY = touch.clientY;
                 initialLeft = touch.clientX - 32;
@@ -1173,6 +1162,11 @@ const PlayAll = (() => {
             $miniPlayer.removeAttribute('inert');
         }
 
+        // 🚨 여기서도 무조건 확장시켜서 재생 차단을 뚫어냅니다
+        if (!isExpanded) {
+            toggleExpand();
+        }
+
         if (!apiReady || !player || typeof player.loadVideoById !== 'function') {
             currentIndex = targetIndex;
             pendingStart = true;
@@ -1182,7 +1176,6 @@ const PlayAll = (() => {
             return;
         }
         
-        // 피드에서 썸네일을 눌렀을 때에도 이 공통 함수 실행
         playAt(targetIndex);
     }
 
@@ -1197,12 +1190,8 @@ const PlayAll = (() => {
         $close = document.getElementById('mpCloseBtn');
 
         if ($playAllBtn) $playAllBtn.onclick = () => startPlayAll(true);
-        
-        // 이전 버튼 클릭 시에도 playAt 호출 (내부적으로 즉시 UI 변경 후 50ms 딜레이 실행됨)
         if ($prev) $prev.onclick = () => currentIndex > 0 ? playAt(currentIndex - 1) : (player && typeof player.seekTo === 'function' && player.seekTo(0, true));
-        // 다음 버튼 클릭 시에도 playAt 호출
         if ($next) $next.onclick = () => currentIndex < queue.length - 1 ? playAt(currentIndex + 1) : stopAll();
-        
         if ($playPause) $playPause.onclick = () => player && (player.getPlayerState() === YT.PlayerState.PLAYING ? player.pauseVideo() : player.playVideo());
         if ($close) $close.onclick = stopAll;
 
@@ -1212,6 +1201,15 @@ const PlayAll = (() => {
             $mpHeader.addEventListener('touchstart', onDragStart, {passive: true});
         }
         
+        // 🌟 PC/서버 캐싱 버그 완벽 방지: HTML이 아니라 JS가 스크립트를 직접 주입하도록 변경
+        if (typeof YT === 'undefined' || typeof YT.Player === 'undefined') {
+            const tag = document.createElement('script');
+            tag.src = "https://www.youtube.com/iframe_api";
+            document.head.appendChild(tag);
+        } else if (typeof YT.Player === 'function') {
+            if (window.onYouTubeIframeAPIReady) window.onYouTubeIframeAPIReady();
+        }
+
         restoreState();
     }
 
