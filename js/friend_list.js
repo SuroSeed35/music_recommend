@@ -178,7 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             showGroupMembers(g.group_id, g.group_name);
                         });
                         
-                        // 🔥 그룹 관리 모달 오픈
+                        // 그룹 관리 모달 오픈
                         div.querySelector('.manage-group-icon').addEventListener('click', (e) => {
                             e.stopPropagation();
                             openGroupManageModal(g.group_id, g.group_name, g.role, g.member_count);
@@ -208,15 +208,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     fDiv.addEventListener('click', () => showProfile(fDiv.dataset));
                     if(friendList) friendList.appendChild(fDiv);
 
+                    // 🔥 [그룹 생성 아이콘 수정] 플렉스 박스와 이미지 크기를 명시하여 깨짐 방지
                     const gDiv = document.createElement('div');
                     gDiv.className = 'friend-item highlight-white group-selectable';
                     gDiv.dataset.id = f.user_id;
                     gDiv.dataset.name = friendName;
+                    gDiv.style.display = 'flex';
+                    gDiv.style.justifyContent = 'space-between';
+                    gDiv.style.alignItems = 'center';
                     gDiv.innerHTML = `
                         <span>${friendName}</span>
-                        <div class="check-icon-wrapper">
-                            <img src="../img/add-group.png" alt="uncheck" class="uncheck-icon">
-                            <img src="../img/high-five.png" alt="check" class="check-icon" style="display: none;">
+                        <div class="check-icon-wrapper" style="display: flex; align-items: center;">
+                            <img src="../img/add-group.png" alt="uncheck" class="uncheck-icon" style="width: 24px; height: 24px; object-fit: contain;">
+                            <img src="../img/high-five.png" alt="check" class="check-icon" style="display: none; width: 24px; height: 24px; object-fit: contain;">
                         </div>`;
                     gDiv.addEventListener('click', () => toggleGroupMember(gDiv));
                     if(groupSelList) groupSelList.appendChild(gDiv);
@@ -234,38 +238,88 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) { console.error("데이터 로드 실패:", err); }
     }
 
-    async function showGroupMembers(groupId, groupName) {
-    try {
-        const res = await fetch(`../php/api.php?action=get_group_members&group_id=${groupId}`);
-        const members = await res.json();
-        document.getElementById('modalTitle').innerText = `${groupName} 멤버 목록`;
-        
-        const messageContainer = document.getElementById('modalMessage');
-        messageContainer.innerHTML = ''; 
-        
-        const listWrapper = document.createElement('div');
-        listWrapper.style.display = 'flex';
-        listWrapper.style.flexDirection = 'column';
-        listWrapper.style.gap = '10px';
-        listWrapper.style.marginTop = '10px';
-        
-        if (members.length === 0) {
-            listWrapper.innerHTML = "<div style='text-align:center; color:#999; padding:15px;'>소속된 멤버가 없습니다.</div>";
-        } else {
-            members.forEach(m => {
-                const statusText = m.status === 'pending' ? ' <span style="color:#ff4d4f; font-size:12px;">(대기 중)</span>' : '';
-                
+    // 🔥 [새로 추가됨] 누락되었던 친구 검색 및 목록 렌더링 함수
+    async function fetchAndDisplayUsers(keyword) {
+        const resultList = document.getElementById('searchResultList');
+        if (!resultList) return;
+
+        resultList.innerHTML = '<div class="empty-msg" style="text-align: center; color: #999; padding: 20px;">불러오는 중...</div>';
+
+        try {
+            const res = await fetch(`../php/api.php?action=search_users&keyword=${encodeURIComponent(keyword)}`);
+            const data = await res.json();
+            
+            resultList.innerHTML = '';
+            
+            if (!data.search_results || data.search_results.length === 0) {
+                resultList.innerHTML = '<div class="empty-msg" style="text-align: center; color: #999; padding: 20px;">검색 결과가 없습니다.</div>';
+                return;
+            }
+
+            const sentRequestIds = data.sent_requests ? data.sent_requests.map(r => parseInt(r.user_id)) : [];
+
+            data.search_results.forEach(user => {
                 const div = document.createElement('div');
-                div.className = 'friend-item highlight-white';
-                div.style.padding = '12px 15px';
-                div.style.borderRadius = '12px';
+                div.className = 'friend-item highlight-white user-search-item';
+                div.dataset.userId = user.user_id;
+                div.dataset.userName = user.username;
                 div.style.display = 'flex';
                 div.style.justifyContent = 'space-between';
                 div.style.alignItems = 'center';
-                div.style.cursor = 'pointer';
+                
+                // 비공개 계정 자물쇠 아이콘
+                const lockIcon = user.is_private == 1 ? '<img src="../img/lock.png" alt="비공개" style="width:14px; height:14px; margin-right:5px; vertical-align:middle;">' : '';
+                
+                const isSent = sentRequestIds.includes(parseInt(user.user_id));
+                
+                if (isSent) {
+                    div.classList.add('request-sent');
+                    div.innerHTML = `<span>${lockIcon}${user.username}</span><span style="font-size:12px; color:#888; font-weight:bold;">요청됨</span>`;
+                } else {
+                    div.innerHTML = `<span>${lockIcon}${user.username}</span><span style="font-size:12px; color:#333;"><i class="fa-solid fa-plus"></i> 추가</span>`;
+                    attachSwipeToAdd(div);
+                    div.addEventListener('click', () => openAddConfirmModal(div));
+                }
+                
+                resultList.appendChild(div);
+            });
+        } catch (err) {
+            console.error("유저 검색 오류:", err);
+            resultList.innerHTML = '<div class="empty-msg" style="text-align: center; color: #ff4d4f; padding: 20px;">오류가 발생했습니다.</div>';
+        }
+    }
+
+    async function showGroupMembers(groupId, groupName) {
+        try {
+            const res = await fetch(`../php/api.php?action=get_group_members&group_id=${groupId}`);
+            const members = await res.json();
+            document.getElementById('modalTitle').innerText = `${groupName} 멤버 목록`;
+            
+            const messageContainer = document.getElementById('modalMessage');
+            messageContainer.innerHTML = ''; 
+            
+            const listWrapper = document.createElement('div');
+            listWrapper.style.display = 'flex';
+            listWrapper.style.flexDirection = 'column';
+            listWrapper.style.gap = '10px';
+            listWrapper.style.marginTop = '10px';
+            
+            if (members.length === 0) {
+                listWrapper.innerHTML = "<div style='text-align:center; color:#999; padding:15px;'>소속된 멤버가 없습니다.</div>";
+            } else {
+                members.forEach(m => {
+                    const statusText = m.status === 'pending' ? ' <span style="color:#ff4d4f; font-size:12px;">(대기 중)</span>' : '';
+                    
+                    const div = document.createElement('div');
+                    div.className = 'friend-item highlight-white';
+                    div.style.padding = '12px 15px';
+                    div.style.borderRadius = '12px';
+                    div.style.display = 'flex';
+                    div.style.justifyContent = 'space-between';
+                    div.style.alignItems = 'center';
+                    div.style.cursor = 'pointer';
                     div.style.border = '1px solid #eee';
                     
-                    // 🔥 m.login_id 를 불러와서 골뱅이(@) 뒤에 붙여줍니다.
                     div.innerHTML = `
                         <div>
                             <span style="font-weight: bold; font-size: 15px; color: #333;">${m.username}</span>
@@ -276,9 +330,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
                     
                     div.addEventListener('click', () => {
-                        // 🔥 멤버 클릭 시 열려있던 '그룹 멤버 목록 모달'을 숨깁니다.
                         document.getElementById('confirmModal').style.display = 'none';
-                        
                         showProfile({
                             name: m.username,
                             bio: m.bio || '등록된 소개가 없습니다.',
@@ -288,17 +340,17 @@ document.addEventListener('DOMContentLoaded', () => {
                             thumb: m.thumbnail_img || '../img/default-music.png'
                         });
                     });
-                    
                     listWrapper.appendChild(div);
                 });
             }
-        
-        messageContainer.appendChild(listWrapper);
-        modalAction = "VIEW_MEMBERS"; 
-        document.getElementById('addConfirmBtn').style.display = 'none'; 
-        document.getElementById('confirmModal').style.display = 'flex';
-    } catch (err) { console.error("멤버 로드 실패:", err); }
-}
+            
+            messageContainer.appendChild(listWrapper);
+            modalAction = "VIEW_MEMBERS"; 
+            document.getElementById('addConfirmBtn').style.display = 'none'; 
+            document.getElementById('confirmModal').style.display = 'flex';
+        } catch (err) { console.error("멤버 로드 실패:", err); }
+    }
+
     function attachSwipeToAdd(item) {
         let startX = 0;
         item.addEventListener('touchstart', e => { if (item.classList.contains('request-sent')) return; startX = e.touches[0].clientX; });
@@ -367,10 +419,10 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('confirmModal').style.display = 'flex';
     }
 
-    // 🔥 방장(admin)인 경우에만 편집/초대 영역 표시
+    // 방장(admin)인 경우에만 편집/초대 영역 표시
     function openGroupManageModal(groupId, groupName, role, count) {
         const modal = document.getElementById('groupManageModal');
-        if(!modal) return; // 모달이 없으면 동작 안함 (에러 방지)
+        if(!modal) return; 
 
         const idInput = document.getElementById('manageGroupId');
         const nameInput = document.getElementById('manageGroupName');
@@ -388,7 +440,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const resultContainer = document.getElementById('inviteSearchResult');
         if(resultContainer) resultContainer.innerHTML = ''; 
         
-        // 방장(admin)일 때만 수정/초대 영역 표시
         const adminSection = document.getElementById('adminOnlySection');
         if (adminSection) {
             adminSection.style.display = (role === 'admin') ? 'block' : 'none';
@@ -439,7 +490,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 else { alert("수락 실패: " + result.message); }
             }else if (modalAction === "LEAVE_GROUP") {
                 const groupId = currentTarget.groupId;
-                processLeaveGroup(groupId, 0); // 방장 위임 없이 바로 나가기
+                processLeaveGroup(groupId, 0); 
             }
         } catch (err) { console.error("작업 실패:", err); }
         document.getElementById('confirmModal').style.display = 'none';
@@ -490,7 +541,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch(err) { console.error(err); }
     });
 
-    // 🔥 권한 및 인원에 따라 방장 위임 로직 실행
     document.getElementById('deleteGroupBtn')?.addEventListener('click', async () => {
         const groupId = document.getElementById('manageGroupId').value;
         const role = document.getElementById('manageGroupRole').value;
@@ -513,11 +563,10 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch(err) { console.error(err); }
         }
 
-        // 🔥 브라우저 기본 confirm 대신 커스텀 모달 띄우기
-        document.getElementById('groupManageModal').style.display = 'none'; // 설정 모달 닫기
+        document.getElementById('groupManageModal').style.display = 'none'; 
         
-        currentTarget = { groupId: groupId }; // 나갈 그룹 ID 임시 저장
-        modalAction = "LEAVE_GROUP"; // 액션 이름 지정
+        currentTarget = { groupId: groupId }; 
+        modalAction = "LEAVE_GROUP"; 
         
         document.getElementById('modalTitle').innerText = "그룹 나가기";
         document.getElementById('modalMessage').innerHTML = `
@@ -530,7 +579,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('confirmModal').style.display = 'flex';
     });
 
-    // 방장 위임 확인 버튼
     document.getElementById('confirmDelegateAndLeaveBtn')?.addEventListener('click', () => {
         const groupId = document.getElementById('manageGroupId').value;
         const newAdminId = document.getElementById('newAdminSelect').value;
