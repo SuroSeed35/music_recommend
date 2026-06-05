@@ -21,7 +21,7 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          # 업로드에서 제외할 파일이나 폴더 (필요시 추가)
+          server-dir: ./public_html/
           exclude: |
             **/.git*
             **/.git*/**
