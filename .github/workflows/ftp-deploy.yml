@@ -1,0 +1,29 @@
+name: Deploy via FTP
+
+# 어떤 이벤트가 발생했을 때 작동할지 설정
+on:
+  push:
+    branches:
+      - main # main 브랜치에 코드가 푸시/머지 될 때만 작동
+
+jobs:
+  ftp-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. 깃허브에 올라온 최신 코드를 불러옴
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. FTP를 통해 서버로 파일 전송 (파일질라 역할)
+      - name: FTP Deploy
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          # 업로드에서 제외할 파일이나 폴더 (필요시 추가)
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            .github/**
