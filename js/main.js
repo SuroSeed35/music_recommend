@@ -83,11 +83,9 @@ async function getYouTubeDetails(videoId) {
 }
 
 /**
- * 추천 버튼 클릭 시 데이터를 서버에 저장합니다.
+ * 데이터를 서버에 저장하는 함수 (forceSave 플래그 추가)
  */
-actionBtn.onclick = async (e) => {
-    e.preventDefault();
-    
+async function submitSong(forceSave = false) {
     const videoId = getYouTubeID(urlInput.value.trim());
     const comment = commentInput.value.trim();
 
@@ -105,10 +103,15 @@ actionBtn.onclick = async (e) => {
     }
 
     const formData = new FormData();
-    formData.append('url', urlInput.value.trim());
+    // 💡 URL을 표준 형태로 통일해서 저장
+    const standardUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    formData.append('url', standardUrl);
     formData.append('comment', comment);
     formData.append('title', info.title);
     formData.append('thumb', mainImage.src);
+    
+    // 💡 백엔드에 강제 저장 여부를 알려줌 (true면 1, false면 0)
+    formData.append('force_save', forceSave ? '1' : '0');
 
     // ⏱️ 4초 안에 응답이 없으면 요청을 중단시키는 장치
     const controller = new AbortController();
@@ -130,8 +133,11 @@ actionBtn.onclick = async (e) => {
     })
     .then(result => {
         if (result.success) {
-            // ✅ 성공 시 랜덤 덕담 띄우기 함수 호출
+            // ✅ 성공
             showFullScreenGreetingAndRedirect("music_list.html"); 
+        } else if (result.is_duplicate) {
+            // 💡 중복 알림이 온 경우: 브라우저 경고창(confirm) 대신 모달 띄우기
+            showDuplicateModal(result.duplicates);
         } else {
             alert(result.message);
             actionBtn.innerText = "이 노래로 추천하기";
@@ -150,6 +156,15 @@ actionBtn.onclick = async (e) => {
         actionBtn.innerText = "이 노래로 추천하기";
         actionBtn.disabled = false;
     });
+}
+
+/**
+ * 추천 버튼 클릭 시 이벤트
+ */
+actionBtn.onclick = (e) => {
+    e.preventDefault();
+    // 처음 클릭할 때는 강제 저장이 아니므로 false로 함수 호출
+    submitSong(false); 
 };
 
 // --- 글자 수 실시간 카운팅 기능 ---
@@ -208,4 +223,45 @@ function showFullScreenGreetingAndRedirect(url) {
     setTimeout(() => { 
         window.location.replace(url); 
     }, 1300);
+}
+
+/**
+ * 💡 중복 노래 확인 모달을 띄우는 함수
+ */
+function showDuplicateModal(duplicates) {
+    const modal = document.getElementById('duplicateModal');
+    const listContainer = document.getElementById('duplicateList');
+    
+    // 리스트 영역 초기화
+    listContainer.innerHTML = '';
+
+    // 서버에서 받은 중복 노래 리스트를 HTML로 만들어 넣기
+    duplicates.forEach(dup => {
+        const item = document.createElement('div');
+        item.style.marginBottom = '8px';
+        item.style.paddingBottom = '8px';
+        item.style.borderBottom = '1px solid #ddd';
+        
+        item.innerHTML = `
+            <div style="font-weight: 600; color: #222; margin-bottom: 2px;">${dup.title}</div>
+            <div style="font-size: 11px; color: #888;">추천일: ${dup.log_date}</div>
+        `;
+        listContainer.appendChild(item);
+    });
+
+    // 모달 보여주기
+    modal.style.display = 'flex';
+
+    // [그대로 추천하기] 버튼 클릭 시
+    document.getElementById('dupConfirmBtn').onclick = () => {
+        modal.style.display = 'none'; // 모달 닫기
+        submitSong(true); // 플래그를 true로 주고 '강제 저장' 다시 실행!
+    };
+
+    // [취소] 버튼 클릭 시
+    document.getElementById('dupCancelBtn').onclick = () => {
+        modal.style.display = 'none'; // 모달 닫기
+        actionBtn.innerText = "이 노래로 추천하기";
+        actionBtn.disabled = false; // 메인 버튼 원상복구
+    };
 }

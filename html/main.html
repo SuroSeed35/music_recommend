@@ -31,6 +31,23 @@
         </div>
     </div>
 
+    <div id="duplicateModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); z-index: 10000; align-items: center; justify-content: center;">
+            <div style="background: #fff; padding: 20px; border-radius: 16px; width: 85%; max-width: 350px; text-align: center; display: flex; flex-direction: column;">
+                <h3 style="margin-top: 0; margin-bottom: 5px; color: #111;">이런, 이미 추천된 노래예요!</h3>
+                <p style="font-size: 13px; color: #777; margin-bottom: 15px;">이전에 누군가 아래와 같이 추천한 적이 있습니다.</p>
+                
+                <div id="duplicateList" style="text-align: left; max-height: 180px; overflow-y: auto; background: #f8f9fa; border-radius: 8px; padding: 12px; margin-bottom: 15px; font-size: 13px;">
+                </div>
+
+                <p style="font-size: 13px; font-weight: bold; color: #333; margin-bottom: 15px;">그래도 이 버전으로 등록하시겠어요?</p>
+
+                <div style="display: flex; gap: 10px;">
+                    <button id="dupCancelBtn" style="flex: 1; padding: 12px; border: none; border-radius: 10px; background: #eee; cursor: pointer; font-weight: bold; color: #555;">취소</button>
+                    <button id="dupConfirmBtn" style="flex: 1; padding: 12px; border: none; border-radius: 10px; background: #111; color: #fff; cursor: pointer; font-weight: bold;">그대로 추천하기</button>
+                </div>
+            </div>
+        </div>
+
     <script src="../js/main.js"></script>
 </body>
 </html>
