@@ -452,28 +452,43 @@ switch ($action) {
         break;
         
     case 'delete_comment':
+        // 1. JSON Body, GET, POST 파라미터 중 어떤 것으로 들어와도 안전하게 수신하도록 개선
         $data = json_decode(file_get_contents('php://input'), true);
-        $comment_id = (int)($data['comment_id'] ?? 0);
-        if ($comment_id <= 0) { 
-            echo json_encode(["success" => false, "message" => "잘못된 요청"]); 
-            break; 
-        }
+        $comment_id = (int)($data['comment_id'] ?? $_GET['comment_id'] ?? $_POST['comment_id'] ?? 0);
 
-        $check_res = mysqli_query($conn, "SELECT user_id FROM song_comments WHERE comment_id = $comment_id AND is_deleted = 0");
+        if ($comment_id <= 0) {
+             echo json_encode(["success" => false, "message" => "유효하지 않은 댓글 번호입니다."]);
+             break;
+         }
+
+        // 2. 댓글 작성자(comment_author)와 해당 음악 게시자(song_owner)를 함께 조회하기 위해 JOIN 사용
+        $sql = "SELECT c.user_id AS comment_author, s.user_id AS song_owner 
+                FROM song_comments c
+                JOIN songs s ON c.song_id = s.song_id
+                WHERE c.comment_id = $comment_id AND c.is_deleted = 0";
+                
+        $check_res = mysqli_query($conn, $sql);
         $check_row = mysqli_fetch_assoc($check_res);
-        if (!$check_row) { 
-            echo json_encode(["success" => false, "message" => "댓글을 찾을 수 없음"]); 
-            break; 
-        }
-        if ((int)$check_row['user_id'] !== $my_id) { 
-            echo json_encode(["success" => false, "message" => "본인 댓글만 삭제 가능"]); 
-            break; 
-        }
 
+        if (!$check_row) {
+             echo json_encode(["success" => false, "message" => "이미 삭제되었거나 존재하지 않는 댓글입니다."]);
+             break;
+         }
+
+        $comment_author = (int)$check_row['comment_author'];
+        $song_owner = (int)$check_row['song_owner'];
+
+        // 3. 권한 체크: '댓글 작성자 본인'이거나 '해당 음악을 올린 게시물 주인'이면 모두 삭제 허용
+        if ($comment_author !== $my_id && $song_owner !== $my_id) {
+             echo json_encode(["success" => false, "message" => "삭제 권한이 없습니다."]);
+             break;
+         }
+
+        // 4. 삭제(is_deleted = 1) 처리 반영
         if (mysqli_query($conn, "UPDATE song_comments SET is_deleted = 1 WHERE comment_id = $comment_id")) {
             echo json_encode(["success" => true]);
         } else {
-            echo json_encode(["success" => false, "message" => "삭제 실패"]);
+            echo json_encode(["success" => false, "message" => "삭제 처리 중 DB 오류가 발생했습니다."]);
         }
         break;
 
