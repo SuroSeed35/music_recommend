@@ -226,7 +226,7 @@ function showFullScreenGreetingAndRedirect(url) {
 }
 
 /**
- * 💡 중복 노래 확인 모달을 띄우는 함수
+ * 💡 중복 노래 확인 모달을 띄우는 함수 (썸네일 추가 및 디자인 수정됨)
  */
 function showDuplicateModal(duplicates) {
     const modal = document.getElementById('duplicateModal');
@@ -238,13 +238,33 @@ function showDuplicateModal(duplicates) {
     // 서버에서 받은 중복 노래 리스트를 HTML로 만들어 넣기
     duplicates.forEach(dup => {
         const item = document.createElement('div');
-        item.style.marginBottom = '8px';
-        item.style.paddingBottom = '8px';
-        item.style.borderBottom = '1px solid #ddd';
+        
+        // CSS Flexbox를 적용하여 썸네일과 텍스트를 가로로 배치
+        item.style.cssText = `
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            margin-bottom: 12px; 
+            padding-bottom: 12px; 
+            border-bottom: 1px solid #f0f0f0;
+        `;
+
+        // DB에 썸네일 이미지가 없을 경우를 대비한 기본 이미지 (Placeholder)
+        const thumbImg = dup.thumbnail_img ? dup.thumbnail_img : 'https://via.placeholder.com/60x45?text=No+Img';
         
         item.innerHTML = `
-            <div style="font-weight: 600; color: #222; margin-bottom: 2px;">${dup.title}</div>
-            <div style="font-size: 11px; color: #888;">추천일: ${dup.log_date}</div>
+            <div style="width: 60px; height: 45px; border-radius: 6px; overflow: hidden; flex-shrink: 0; background: #eee;">
+                <img src="${thumbImg}" alt="thumbnail" style="width: 100%; height: 100%; object-fit: cover;">
+            </div>
+            
+            <div style="display: flex; flex-direction: column; overflow: hidden; flex-grow: 1;">
+                <span style="font-size: 14px; font-weight: 700; color: #222; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px;">
+                    ${dup.title}
+                </span>
+                <span style="font-size: 11px; color: #888;">
+                    추천일: ${dup.log_date}
+                </span>
+            </div>
         `;
         listContainer.appendChild(item);
     });
