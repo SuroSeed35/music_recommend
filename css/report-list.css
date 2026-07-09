@@ -1,0 +1,151 @@
+/* 기본 초기화 */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* 화면 전체 스크롤 원천 차단 */
+body {
+    background-color: #ffffff;
+    display: flex;
+    justify-content: center;
+    height: 100vh; 
+    height: 100dvh; /* 모바일 동적 뷰포트 대응 */
+    overflow: hidden; 
+}
+
+.app-container {
+    width: 100%;
+    max-width: 480px;
+    height: 100%; 
+    display: flex;
+    flex-direction: column; /* 세로 정렬 */
+    padding-top: 15px; 
+}
+
+/* 상단 고정 영역 (검색, 날짜 등) */
+.top-fixed-section {
+    flex-shrink: 0; /* 크기 축소 방지 */
+    padding: 0 15px;
+    z-index: 30; /* 스크롤되는 요소보다 위로 */
+}
+
+.header { margin-bottom: 15px; }
+.back-button { background: none; border: none; cursor: pointer; padding: 5px; color: #333; margin-left: -5px; }
+
+.search-container { position: relative; margin-bottom: 15px; }
+.search-input { width: 100%; padding: 14px 40px 14px 15px; border: 1px solid #ccc; border-radius: 30px; font-size: 15px; outline: none; }
+.search-icon { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #333; }
+
+/* 연/월 리스트 */
+.date-picker-menu { position: relative; display: inline-block; margin-bottom: 15px; margin-left: 5px; width: max-content; }
+.date-summary { list-style: none; display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 14px; font-weight: 600; color: #007bff; user-select: none; }
+.date-summary::-webkit-details-marker { display: none; }
+.calendar-icon { color: #007bff; }
+.date-text { text-decoration: underline; text-underline-offset: 4px; }
+
+.date-dropdown-lists { position: absolute; top: 100%; left: 0; margin-top: 5px; background: #fff; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: flex; gap: 0; padding: 5px 0; z-index: 40; }
+
+/* 날짜 리스트 스크롤바 숨김 */
+.date-dropdown-lists ul { 
+    list-style: none; max-height: 160px; overflow-y: auto; padding: 0 5px; width: 75px; 
+    -ms-overflow-style: none; 
+    scrollbar-width: none; 
+}
+.date-dropdown-lists ul::-webkit-scrollbar { display: none; } 
+
+.date-dropdown-lists ul:first-child { border-right: 1px solid #eee; }
+.date-dropdown-lists li { padding: 8px 10px; font-size: 13px; color: #333; cursor: pointer; border-radius: 4px; text-align: center; }
+.date-dropdown-lists li:hover { background-color: #f5f5f5; }
+.date-dropdown-lists li.selected { background-color: #007bff; color: #fff; font-weight: bold; }
+
+/* ==============================================
+   보고서 리스트 스크롤 영역
+   ============================================== */
+.report-list-content {
+    flex-grow: 1; 
+    overflow-y: auto; 
+    padding: 0 15px 40px 15px; 
+    display: flex;
+    flex-direction: column;
+    gap: 25px; 
+    
+    /* 스크롤바 완전히 숨기기 */
+    -ms-overflow-style: none; 
+    scrollbar-width: none; 
+}
+.report-list-content::-webkit-scrollbar {
+    display: none; 
+}
+
+/* 연도 타이틀 */
+.year-heading { font-size: 18px; font-weight: 700; color: #222; margin: 0 0 10px 5px; }
+
+/* 그리드 레이아웃 */
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    align-content: start; 
+    gap: 10px;
+}
+
+/* ★ 추가: 메뉴가 열린 박스가 다른 박스들보다 위로 오도록 설정 */
+.grid-item:has(details[open]) {
+    z-index: 10;
+}
+
+.grid-item { background-color: #f2f2f2; border: 1px solid #e0e0e0; border-radius: 8px; position: relative; background-size: cover; background-position: center; background-repeat: no-repeat; width: 100%; aspect-ratio: 3 / 4; }
+
+/* 하단 정보 영역 */
+.item-footer { position: absolute; bottom: 0; left: 0; width: 100%; height: 45%; min-height: 50px; background: transparent; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; padding-bottom: 5px; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; }
+
+.report-title { font-size: 11px; font-weight: bold; color: #444; text-align: center; width: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
+.report-subtitle { font-size: 9px; color: #777; margin-bottom: 2px; }
+
+/* ★ 변경: 메뉴 컨테이너 기준점 설정 */
+.more-menu { 
+    position: relative; /* 자식인 dropdown이 '...' 기준으로 열리도록 위치 기준점 잡아줌 */
+    width: 100%; 
+    text-align: center; 
+}
+.more-menu summary { list-style: none; cursor: pointer; font-size: 14px; font-weight: bold; color: #666; display: inline-block; padding: 0 10px; line-height: 1; }
+.more-menu summary::-webkit-details-marker { display: none; }
+
+.grid-item.has-image .item-footer { background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.5) 60%, rgba(0, 0, 0, 0) 100%); }
+.grid-item.has-image .report-title, .grid-item.has-image .report-subtitle, .grid-item.has-image .more-menu summary { color: #ffffff; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8); }
+
+/* ★ 변경: 드롭다운이 '...' 아래로 열리도록 수정 */
+.dropdown { 
+    position: absolute; 
+    top: 100%; /* bottom: 100% 에서 top: 100% 로 변경하여 아래로 열림 */
+    left: 50%; 
+    transform: translateX(-50%); 
+    background-color: #fff; 
+    border: 1px solid #ddd; 
+    border-radius: 8px; 
+    list-style: none; 
+    padding: 5px 0; 
+    margin-top: 5px; /* 위쪽 여백으로 띄워줌 */
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+    min-width: 110px; 
+    z-index: 10; 
+    text-align: center; 
+}
+.dropdown li { padding: 10px; font-size: 12px; color: #333; cursor: pointer; display: block; text-shadow: none; border-bottom: 1px solid #f0f0f0; }
+.dropdown li:last-child { border-bottom: none; }
+.dropdown li:hover { background-color: #f5f5f5; }
+
+/* 모달 창 */
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center; }
+.modal-overlay.active { display: flex; }
+.modal-content { background: #fff; width: 85%; max-width: 320px; border-radius: 12px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+.modal-content h3 { margin-bottom: 15px; font-size: 16px; color: #222; }
+.modal-input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 20px; font-size: 14px; }
+.modal-file-input { margin-bottom: 20px; font-size: 13px; }
+.details-info { font-size: 13px; color: #444; line-height: 1.6; margin-bottom: 20px; background: #f9f9f9; padding: 10px; border-radius: 6px; }
+.modal-actions { display: flex; gap: 10px; }
+.modal-actions button { flex: 1; padding: 10px; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; font-weight: bold; }
+.btn-cancel { background: #eee; color: #333; }
+.btn-save { background: #007bff; color: #fff; }
