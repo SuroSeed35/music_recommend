@@ -51,72 +51,8 @@
         </div>
 
         <div class="report-list-content" id="reportGrid">
-            
-            <div class="year-group" id="year-2026">
-                <h2 class="year-heading">2026</h2>
-                <div class="grid-container">
-                    <div class="grid-item has-image" style="background-image: url('https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=300&auto=format&fit=crop');">
-                        <div class="item-footer">
-                            <div class="report-title">나의 첫 보고서</div>
-                            <div class="report-subtitle">7월 보고서</div>
-                            <details class="more-menu">
-                                <summary>...</summary>
-                                <ul class="dropdown">
-                                    <li class="menu-edit-title">제목 변경하기</li>
-                                    <li class="menu-edit-cover">표지 변경하기</li>
-                                    <li class="menu-show-details">세부사항</li>
-                                </ul>
-                            </details>
-                        </div>
-                    </div>
-                    <script>
-                        for(let i=0; i<4; i++) {
-                            document.write(`
-                            <div class="grid-item">
-                                <div class="item-footer">
-                                    <div class="report-title">새 보고서</div>
-                                    <div class="report-subtitle">6월 보고서</div>
-                                    <details class="more-menu">
-                                        <summary>...</summary>
-                                        <ul class="dropdown">
-                                            <li class="menu-edit-title">제목 변경하기</li>
-                                            <li class="menu-edit-cover">표지 변경하기</li>
-                                            <li class="menu-show-details">세부사항</li>
-                                        </ul>
-                                    </details>
-                                </div>
-                            </div>`);
-                        }
-                    </script>
-                </div>
             </div>
 
-            <div class="year-group" id="year-2025">
-                <h2 class="year-heading">2025</h2>
-                <div class="grid-container">
-                    <script>
-                        for(let i=0; i<5; i++) {
-                            document.write(`
-                            <div class="grid-item">
-                                <div class="item-footer">
-                                    <div class="report-title">작년 보고서</div>
-                                    <div class="report-subtitle">12월 보고서</div>
-                                    <details class="more-menu">
-                                        <summary>...</summary>
-                                        <ul class="dropdown">
-                                            <li class="menu-edit-title">제목 변경하기</li>
-                                            <li class="menu-edit-cover">표지 변경하기</li>
-                                            <li class="menu-show-details">세부사항</li>
-                                        </ul>
-                                    </details>
-                                </div>
-                            </div>`);
-                        }
-                    </script>
-                </div>
-            </div>
-
-        </div>
     </div>
 
     <div class="modal-overlay" id="titleModal">
@@ -146,9 +82,8 @@
         <div class="modal-content">
             <h3>세부사항</h3>
             <div class="details-info">
-                <p><strong>생성일:</strong> <span id="detailDate">2026-07-09</span></p>
-                <p><strong>시간:</strong> <span id="detailTime">오후 3:52</span></p>
-                <p><strong>파일 크기:</strong> <span id="detailSize">2.4 MB</span></p>
+                <p><strong>생성일:</strong> <span id="detailDate">-</span></p>
+                <p><strong>파일 크기:</strong> <span id="detailSize">-</span></p>
                 <p><strong>포맷:</strong> JPG / PDF</p>
             </div>
             <div class="modal-actions">

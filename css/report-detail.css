@@ -1,0 +1,231 @@
+/* 기본 초기화 */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* 화면 전체 스크롤 원천 차단 */
+body {
+    background-color: #f2f2f2; /* 기존 report-list 박스들과 유사한 회색 배경 */
+    display: flex;
+    justify-content: center;
+    height: 100vh; 
+    height: 100dvh; 
+    overflow: hidden; 
+}
+
+.app-container {
+    width: 100%;
+    max-width: 480px;
+    height: 100%; 
+    display: flex;
+    flex-direction: column;
+    background-color: #f2f2f2; 
+}
+
+/* 상단 고정 헤더 */
+.top-fixed {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px;
+    background-color: #fff; /* 헤더는 흰색으로 구분 */
+    border-bottom: 1px solid #e0e0e0;
+    z-index: 30;
+}
+.back-button { 
+    background: none; 
+    border: none; 
+    cursor: pointer; 
+    color: #333; 
+    display: flex; 
+    align-items: center; 
+    margin-left: -5px;
+}
+.header-title { 
+    font-size: 16px; 
+    font-weight: 700; 
+    color: #333; 
+}
+.header-right-empty { 
+    width: 24px; 
+}
+
+/* ==============================================
+   보고서 내용 스크롤 영역
+   ============================================== */
+.report-content {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px; /* 각 통계 카드 사이의 간격 */
+    
+    /* 스크롤바 숨기기 */
+    -ms-overflow-style: none; /* IE/Edge */
+    scrollbar-width: none; /* Firefox */
+}
+.report-content::-webkit-scrollbar {
+    display: none; /* Chrome, Safari */
+}
+
+/* 공통 카드 스타일 */
+.stat-card {
+    background-color: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.03); /* 아주 연한 그림자 */
+}
+.card-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #222;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* 1. 최애 아티스트 */
+.artist-container {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.artist-img {
+    width: 65px;
+    height: 65px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #f2f2f2;
+}
+.artist-info { flex-grow: 1; }
+.artist-name { font-size: 18px; font-weight: 800; color: #333; margin-bottom: 4px; }
+.artist-desc { font-size: 13px; color: #666; }
+.artist-desc strong { color: #007bff; font-size: 14px; }
+
+/* 2. 많이 들은 노래 (TOP 3) */
+.song-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+.song-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.song-rank { font-size: 16px; font-weight: bold; width: 22px; text-align: center; }
+.rank-1 { color: #ff3b30; font-size: 18px; }
+.rank-2 { color: #ff9500; }
+.rank-3 { color: #34c759; }
+
+.song-thumb { width: 45px; height: 45px; border-radius: 6px; }
+.song-info { flex-grow: 1; }
+.song-title { font-size: 14px; font-weight: 600; color: #222; margin-bottom: 3px; }
+.song-artist { font-size: 12px; color: #777; }
+.song-count { font-size: 12px; font-weight: bold; color: #888; }
+
+/* 3. 추천 피크 타임 */
+.peak-time-container {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+}
+.time-icon { font-size: 32px; }
+.time-info { flex-grow: 1; }
+.time-text { font-size: 16px; font-weight: 700; color: #007bff; margin-bottom: 4px; }
+.time-desc { font-size: 12px; color: #555; line-height: 1.4; }
+
+/* 4. 좋아요 누른 곡 리스트 */
+.like-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+.like-header .card-title { margin-bottom: 0; }
+.like-total { font-size: 13px; color: #666; }
+.like-total strong { color: #ff3b30; font-size: 14px; }
+
+.like-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+.like-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f0f0f0;
+}
+.like-item:last-child { border-bottom: none; padding-bottom: 0; }
+.like-thumb {
+    width: 40px; height: 40px; border-radius: 6px; 
+    display: flex; justify-content: center; align-items: center; font-size: 16px;
+}
+.like-info { flex-grow: 1; }
+.like-title { font-size: 13px; font-weight: 600; color: #222; margin-bottom: 3px; }
+.like-artist { font-size: 12px; color: #777; }
+
+.btn-more {
+    width: 100%;
+    padding: 12px;
+    background-color: #f0f0f0;
+    color: #444;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.btn-more:hover { background-color: #e4e4e4; }
+
+/* 5. 취향이 비슷한 사람 */
+.similar-users {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+.user-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #f8f9fa;
+    padding: 15px 5px;
+    border-radius: 8px;
+    text-align: center;
+}
+.user-avatar, .default-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 8px;
+}
+.default-avatar {
+    background-color: #ddd;
+    display: flex; justify-content: center; align-items: center; font-size: 24px;
+}
+.user-name { font-size: 13px; font-weight: 700; color: #333; margin-bottom: 6px; }
+.match-badge {
+    background-color: #e3f2fd;
+    color: #007bff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 20px;
+}

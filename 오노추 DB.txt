@@ -340,3 +340,13 @@ CREATE TABLE IF NOT EXISTS song_likes (
     FOREIGN KEY (song_id) REFERENCES songs(song_id) ON DELETE CASCADE,
     UNIQUE KEY unique_user_song_like (user_id, song_id) -- 한 유저가 같은 곡에 여러번 좋아요 방지
 );
+
+CREATE TABLE reports (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,              -- 작성자(회원) ID
+    title VARCHAR(255) DEFAULT '새 보고서',
+    target_month VARCHAR(7) NOT NULL,  -- 예: '2026-07'
+    cover_image TEXT NULL,             -- 이미지 경로
+    file_size VARCHAR(50) DEFAULT '2.4 MB', 
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
