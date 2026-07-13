@@ -14,6 +14,45 @@ $action = $_GET['action'] ?? '';
 
 header('Content-Type: application/json');
 
+/* ==========================================================================
+   📌 [임시 탑재] 대댓글 계층형 데이터 가상 변환 레이어
+   DB 스키마 변경 없이 기존 content의 [REPLY:시간]을 객체 구조로 분리/결합합니다.
+   ========================================================================== */
+
+/**
+ * 1. 저장할 때: 프론트에서 보낸 parent_time을 [REPLY:시간] 형태로 content 앞에 붙여주는 함수
+ */
+function packReplyContent($content, $parent_time) {
+    if (!empty($parent_time)) {
+        return "[REPLY:" . trim($parent_time) . "]" . $content;
+    }
+    return $content;
+}
+
+/**
+ * 2. 가져올 때: DB에서 꺼낸 content에 [REPLY:...]가 있으면 parent_id와 순수 content로 쪼개주는 함수
+ */
+function unpackReplyContent($row) {
+    $content = $row['content'] ?? '';
+    $row['parent_id'] = null; // 프론트 대댓글 구별용 방 만들기
+    $row['parent_time'] = null;
+
+    if (strpos($content, '[REPLY:') === 0) {
+        // 정규식으로 [REPLY:부모시간]순수내용 분리
+        if (preg_match('/^\[REPLY:(.*?)\](.*)$/', $content, $matches)) {
+            $row['parent_time'] = trim($matches[1]);
+            $row['content'] = $matches[2];
+            // 프론트 렌더링에서 부모가 있는 '대댓글'로 명확히 인식하도록 식별자 대입
+            $row['parent_id'] = $row['parent_time']; 
+        }
+    }
+    return $row;
+}
+
+/* ==========================================================================
+   아래에 case 'add_comment': 와 case 'get_comments': 로직이 이어집니다.
+   ========================================================================== */
+
 switch ($action) {
     case 'get_my_info':
         $sql = "SELECT username, login_id FROM users WHERE user_id = $my_id";
@@ -65,6 +104,7 @@ switch ($action) {
         $friends = mysqli_fetch_all($friend_res, MYSQLI_ASSOC);
 
         // 5. 피드 정보
+        // 5. 피드 정보 (수정된 쿼리: is_liked 값 추가)
         $user_info_res = mysqli_query($conn, "SELECT main_group_id FROM users WHERE user_id = $my_id");
         $user_info = mysqli_fetch_assoc($user_info_res);
         $main_group_id = $user_info['main_group_id'] ? (int)$user_info['main_group_id'] : 0;
@@ -72,7 +112,15 @@ switch ($action) {
         if ($main_group_id == 0) { $target_users_sql = "SELECT user_id, username, login_id FROM users WHERE user_id = $my_id"; }
         else { $target_users_sql = "SELECT u.user_id, u.username, u.login_id FROM group_members gm JOIN users u ON gm.user_id = u.user_id WHERE gm.group_id = $main_group_id AND gm.status = 'accepted'"; }
 
-        $feed_sql = "SELECT t.user_id, t.username, t.login_id, s.song_id, s.youtube_url, s.title, s.daily_comment, s.thumbnail_img, s.created_at, s.log_date, s.log_time, IF(t.user_id = $my_id, 1, 0) as is_me FROM ($target_users_sql) t LEFT JOIN songs s ON t.user_id = s.user_id AND DATE(s.created_at) = '$target_date' ORDER BY is_me DESC, s.created_at DESC, t.username ASC";
+       $feed_sql = "SELECT t.user_id, t.username, t.login_id, s.song_id, s.youtube_url, s.title, s.daily_comment, s.thumbnail_img, s.created_at, s.log_date, s.log_time, 
+                    IF(t.user_id = $my_id, 1, 0) as is_me,
+                    IF(sl.like_id IS NOT NULL, 1, 0) as is_liked,
+                    -- 📌 이 한 줄을 추가해서 삭제 안 된 댓글 총 갯수를 쿼리로 가져옵니다.
+                    (SELECT COUNT(*) FROM song_comments c WHERE c.song_id = s.song_id AND c.is_deleted = 0) as comment_count
+             FROM ($target_users_sql) t 
+             LEFT JOIN songs s ON t.user_id = s.user_id AND DATE(s.created_at) = '$target_date' 
+             LEFT JOIN song_likes sl ON s.song_id = sl.song_id AND sl.user_id = $my_id
+             ORDER BY is_me DESC, s.created_at DESC, t.username ASC";
         $feed_res = mysqli_query($conn, $feed_sql);
         $feed_songs = mysqli_fetch_all($feed_res, MYSQLI_ASSOC);
 
@@ -247,7 +295,22 @@ switch ($action) {
             echo json_encode(["success" => false, "message" => "잘못된 입력값"]);
         }
         break;
-
+    
+    case 'get_liked_songs':
+        $sql = "SELECT sl.song_id, sl.created_at as liked_at, 
+                       s.title, s.thumbnail_img, s.log_date, 
+                       u.login_id as recommender_id
+                FROM song_likes sl
+                JOIN songs s ON sl.song_id = s.song_id
+                JOIN users u ON s.user_id = u.user_id
+                WHERE sl.user_id = $my_id
+                ORDER BY sl.created_at DESC";
+                
+        $res = mysqli_query($conn, $sql);
+        $liked_songs = mysqli_fetch_all($res, MYSQLI_ASSOC);
+        echo json_encode(["success" => true, "liked_songs" => $liked_songs]);
+        break;
+        
     case 'accept_group_invite':
         $data = json_decode(file_get_contents('php://input'), true);
         $group_id = (int)($data['group_id'] ?? 0);
@@ -318,7 +381,7 @@ switch ($action) {
         echo json_encode(["already_done" => mysqli_num_rows($res) > 0]);
         break;
 
-    case 'get_comments':
+   case 'get_comments':
         $song_id = (int)($_GET['song_id'] ?? 0);
         if ($song_id <= 0) { 
             echo json_encode(["success" => false, "message" => "잘못된 요청"]); 
@@ -372,7 +435,15 @@ switch ($action) {
                 ORDER BY c.created_at ASC";
                 
         $res = mysqli_query($conn, $sql);
-        $comments = mysqli_fetch_all($res, MYSQLI_ASSOC);
+        $raw_comments = mysqli_fetch_all($res, MYSQLI_ASSOC);
+        
+        // 📌 [가상 레이어 적용] 추출된 댓글을 하나씩 돌면서 
+        // 본문에 [REPLY:시간]이 있다면 parent_id와 parent_time 구조로 분리 가공합니다.
+        $comments = [];
+        foreach ($raw_comments as $row) {
+            $comments[] = unpackReplyContent($row);
+        }
+
         echo json_encode(["success" => true, "comments" => $comments]);
         break;
 
@@ -380,6 +451,9 @@ switch ($action) {
         $data = json_decode(file_get_contents('php://input'), true);
         $song_id = (int)($data['song_id'] ?? 0);
         $content = trim($data['content'] ?? '');
+        
+        // 📌 프론트엔드가 대댓글 작성 시 함께 전송할 부모 댓글의 시간(식별자)을 받아옵니다.
+        $parent_time = trim($data['parent_time'] ?? '');
 
         // 입력 검증
         if ($song_id <= 0 || $content === '') { 
@@ -417,8 +491,14 @@ switch ($action) {
             break; 
         }
 
-        $safe_content = mysqli_real_escape_string($conn, $content);
+        // 📌 [가상 레이어 적용] 만약 대댓글(parent_time이 존재)이라면 
+        // [REPLY:시간]을 본문 내용 앞에 결합하여 최종 본문으로 가공합니다.
+        $final_content = packReplyContent($content, $parent_time);
+
+        // SQL 인젝션 방지는 가공된 최종 본문($final_content)으로 처리합니다.
+        $safe_content = mysqli_real_escape_string($conn, $final_content);
         
+        // 테이블 스키마 개정이 없으므로 기존 SQL 구조 그대로 들어갑니다!
         $sql = "INSERT INTO song_comments (song_id, user_id, group_id, content) 
                 VALUES ($song_id, $my_id, $current_group_id, '$safe_content')";
                 
@@ -437,7 +517,8 @@ switch ($action) {
             break; 
         }
 
-        $check_res = mysqli_query($conn, "SELECT user_id FROM song_comments WHERE comment_id = $comment_id AND is_deleted = 0");
+        // 📌 연쇄 삭제를 위해 기존 SELECT에 created_at 컬럼을 추가로 가져옵니다.
+        $check_res = mysqli_query($conn, "SELECT user_id, created_at FROM song_comments WHERE comment_id = $comment_id AND is_deleted = 0");
         $check_row = mysqli_fetch_assoc($check_res);
         if (!$check_row) { 
             echo json_encode(["success" => false, "message" => "댓글을 찾을 수 없음"]); 
@@ -448,10 +529,37 @@ switch ($action) {
             break; 
         }
 
-        if (mysqli_query($conn, "UPDATE song_comments SET is_deleted = 1 WHERE comment_id = $comment_id")) {
+        // 대댓글 추적을 위해 부모의 생성 시간을 변수에 담아둡니다.
+        $parent_created_at = $check_row['created_at'];
+
+        // 📌 트랜잭션 시작 (부모와 자식 대댓글이 안전하게 모두 지워지거나, 실패 시 취소되도록 보호)
+        mysqli_begin_transaction($conn);
+
+        try {
+            // [1] 원본 부모 댓글 삭제 (is_deleted = 1)
+            $delete_parent_sql = "UPDATE song_comments SET is_deleted = 1 WHERE comment_id = $comment_id";
+            if (!mysqli_query($conn, $delete_parent_sql)) {
+                throw new Exception("댓글 삭제 실패");
+            }
+
+            // [2] 이 부모 댓글의 등록시간을 본문에 품고 있는 대댓글([REPLY:시간]...)도 찾아서 같이 삭제
+            $safe_time = mysqli_real_escape_string($conn, $parent_created_at);
+            $delete_replies_sql = "UPDATE song_comments 
+                                   SET is_deleted = 1 
+                                   WHERE content LIKE '[REPLY:$safe_time]%' AND is_deleted = 0";
+                                   
+            if (!mysqli_query($conn, $delete_replies_sql)) {
+                throw new Exception("대댓글 연쇄 삭제 실패");
+            }
+
+            // 둘 다 정상 처리되면 DB에 확정 반영
+            mysqli_commit($conn);
             echo json_encode(["success" => true]);
-        } else {
-            echo json_encode(["success" => false, "message" => "삭제 실패"]);
+
+        } catch (Exception $e) {
+            // 하나라도 삐끗하면 롤백하여 안전하게 원상복구
+            mysqli_rollback($conn);
+            echo json_encode(["success" => false, "message" => $e->getMessage()]);
         }
         break;
 
@@ -491,6 +599,28 @@ switch ($action) {
             }
         } else {
             echo json_encode(['success' => false, 'message' => '유효하지 않은 데이터']);
+        }
+        break;
+    case 'toggle_like':
+        $data = json_decode(file_get_contents('php://input'), true);
+        $song_id = (int)($data['song_id'] ?? 0);
+        
+        if ($song_id > 0) {
+            // 이미 좋아요를 눌렀는지 확인
+            $check_sql = "SELECT like_id FROM song_likes WHERE user_id = $my_id AND song_id = $song_id";
+            $res = mysqli_query($conn, $check_sql);
+            
+            if (mysqli_num_rows($res) > 0) {
+                // 이미 눌렀다면 좋아요 취소 (삭제)
+                mysqli_query($conn, "DELETE FROM song_likes WHERE user_id = $my_id AND song_id = $song_id");
+                echo json_encode(["success" => true, "liked" => false]);
+            } else {
+                // 안 눌렀다면 좋아요 추가 (삽입)
+                mysqli_query($conn, "INSERT INTO song_likes (user_id, song_id) VALUES ($my_id, $song_id)");
+                echo json_encode(["success" => true, "liked" => true]);
+            }
+        } else {
+            echo json_encode(["success" => false, "message" => "잘못된 노래 ID"]);
         }
         break;
 

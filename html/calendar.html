@@ -23,21 +23,26 @@
         </header>
 
         <div class="weekdays">
-            <div>일</div><div>월요일</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div>
+            <div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div>
         </div>
 
         <div id="calendar-grid" class="calendar-grid"></div>
         <hr class="separator">
 
         <div class="play-all-controls" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <label class="switch">
-                    <input type="checkbox" id="playAllSwitch">
-                    <span class="slider round"></span>
-                </label>
-                <span id="playAllLabel" style="font-size: 14px; font-weight: bold;">날짜별 듣기</span>
+            <div class="segmented-control">
+                <input type="radio" name="playMode" id="mode-daily" value="daily" checked>
+                <label for="mode-daily">날짜별</label>
+                
+                <input type="radio" name="playMode" id="mode-period" value="period">
+                <label for="mode-period">기간별</label>
+                
+                <input type="radio" name="playMode" id="mode-liked" value="liked">
+                <label for="mode-liked">좋아요</label>
+                
+                <div class="slider-bg"></div>
             </div>
-            <button id="playSelectedBtn" style="background: #000000; border: none; padding: 8px 16px; border-radius: 20px; font-weight: 500; cursor: pointer; color: white; font-size: 11px;">
+            <button id="playSelectedBtn" style="background: #000000; border: none; padding: 8px 16px; border-radius: 20px; font-weight: 500; cursor: pointer; color: white; font-size: 11px; flex-shrink: 0;">
                 모아듣기
             </button>
         </div>
@@ -60,8 +65,13 @@
                         <div id="modal-calendar-grid" class="modal-calendar-grid"></div>
                     </div>
 
-                    <div id="modal-selected-range" style="font-size: 13px; font-weight: 700; margin-bottom: 12px; color: #555; padding: 8px; background: #f8f9fa; border-radius: 8px; margin-top: 10px;">
-                        기간을 선택해주세요
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; margin-top: 10px;">
+                        <div id="modal-selected-range" style="font-size: 13px; font-weight: 700; color: #555; padding: 8px; background: #f8f9fa; border-radius: 8px; flex: 1; margin-right: 8px; text-align: center;">
+                            기간을 선택해주세요
+                        </div>
+                        <button id="selectAllPeriodBtn" style="padding: 8px 12px; border: none; border-radius: 8px; background: #eef2ff; color: #4361ee; font-weight: 800; font-size: 12px; cursor: pointer; flex-shrink: 0; box-shadow: 0 2px 4px rgba(67, 97, 238, 0.1);">
+                            전체 기간
+                        </button>
                     </div>
 
                     <div style="display: flex; gap: 10px; flex-shrink: 0; margin-top: 5px;">
@@ -83,6 +93,7 @@
                 </div>
             </div>
         </div>
+
         <div class="mini-player" id="miniPlayer" aria-hidden="true">
             <div class="mini-player-header" id="mpHeader">
                 <div class="mini-player-thumb">
@@ -112,9 +123,7 @@
         <div class="category-select-wrapper">
             <div id="current-category-name" class="current-category">전체</div>
             <i class="fas fa-chevron-down select-arrow"></i>
-            
-            <div id="category-dropdown" class="category-dropdown-menu">
-            </div>
+            <div id="category-dropdown" class="category-dropdown-menu"></div>
         </div>
         
         <div id="selected-song-list" class="song-card-container"></div>

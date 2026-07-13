@@ -19,10 +19,12 @@ $user_cond = ($group_id === 0)
     ? "s.user_id = $my_id" 
     : "s.user_id IN (SELECT user_id FROM group_members WHERE group_id = $group_id)";
 
-// 1. SELECT 문에 s.song_id 추가
-$sql = "SELECT s.song_id, u.username, u.login_id, s.daily_comment, s.title, s.thumbnail_img, s.youtube_url, s.log_date, s.created_at 
+// 🌟 수정됨: song_likes 테이블을 조인하여 is_liked 상태 추가
+$sql = "SELECT s.song_id, u.username, u.login_id, s.daily_comment, s.title, s.thumbnail_img, s.youtube_url, s.log_date, s.created_at,
+               IF(sl.like_id IS NOT NULL, 1, 0) as is_liked 
         FROM songs s 
         JOIN users u ON s.user_id = u.user_id 
+        LEFT JOIN song_likes sl ON s.song_id = sl.song_id AND sl.user_id = $my_id
         WHERE YEAR(s.log_date) = $year 
         AND MONTH(s.log_date) = $month
         AND $user_cond
@@ -33,17 +35,11 @@ $songs = [];
 
 if ($result) {
     while($row = $result->fetch_assoc()) {
-        // created_at 시간을 타임스탬프로 변환
         $timestamp = strtotime($row['created_at']); 
-
-        // 오전/오후 판별 (date('A')는 AM 또는 PM을 반환함)
         $ampm = (date('A', $timestamp) === 'AM') ? '오전' : '오후'; 
-
-        // 12시간 형식의 시:분 생성 (g는 0이 붙지 않는 12시간 형식)
         $time12 = date('g:i', $timestamp); 
 
         $songs[] = [
-            // 2. songId를 배열에 추가 (모아듣기 플레이어 연동용)
             "songId" => $row['song_id'], 
             "uploadDate" => str_replace('-', '.', $row['log_date']),
             "userName" => $row['username'],
@@ -52,7 +48,7 @@ if ($result) {
             "videoTitle" => $row['title'],
             "thumb" => $row['thumbnail_img'],
             "url" => $row['youtube_url'],
-            // 최종 결과: "오후 3:49" 형식으로 전달
+            "isLiked" => (int)$row['is_liked'], // 🌟 하트 활성화 여부
             "uploadTime" => $ampm . " " . $time12 
         ];
     }
