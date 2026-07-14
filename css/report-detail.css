@@ -1,231 +1,276 @@
-/* 기본 초기화 */
+/* 1. 다운로드한 영문 폰트 등록 */
+@font-face {
+  font-family: 'MyCustomEnglishFont'; 
+  src: url('Browpencil_namgim-Regular.ttf') format('truetype'); 
+  font-weight: 800; 
+  font-style: normal;
+}
+
+/* 2. 다운로드한 한글 폰트 등록 */
+@font-face { font-family: 'Pretendard'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/pretendard@1.0/Pretendard-Thin.woff2') format('woff2'); font-weight: 100; font-display: swap; }
+@font-face { font-family: 'Pretendard'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/pretendard@1.0/Pretendard-ExtraLight.woff2') format('woff2'); font-weight: 200; font-display: swap; }
+@font-face { font-family: 'Pretendard'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/pretendard@1.0/Pretendard-Light.woff2') format('woff2'); font-weight: 300; font-display: swap; }
+@font-face { font-family: 'Pretendard'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/pretendard@1.0/Pretendard-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Pretendard'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/pretendard@1.0/Pretendard-Medium.woff2') format('woff2'); font-weight: 500; font-display: swap; }
+@font-face { font-family: 'Pretendard'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/pretendard@1.0/Pretendard-SemiBold.woff2') format('woff2'); font-weight: 600; font-display: swap; }
+@font-face { font-family: 'Pretendard'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/pretendard@1.0/Pretendard-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'Pretendard'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/pretendard@1.0/Pretendard-ExtraBold.woff2') format('woff2'); font-weight: 800; font-display: swap; }
+@font-face { font-family: 'Pretendard'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/pretendard@1.0/Pretendard-Black.woff2') format('woff2'); font-weight: 900; font-display: swap; }
+
+/* 기본 초기화 및 폰트 설정 */
 * {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
-/* 화면 전체 스크롤 원천 차단 */
 body {
-    background-color: #f2f2f2; /* 기존 report-list 박스들과 유사한 회색 배경 */
-    display: flex;
-    justify-content: center;
-    height: 100vh; 
-    height: 100dvh; 
-    overflow: hidden; 
+  background-color: #f8f9fa;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  color: #111;
 }
 
-.app-container {
-    width: 100%;
-    max-width: 480px;
-    height: 100%; 
-    display: flex;
-    flex-direction: column;
-    background-color: #f2f2f2; 
+/* 모바일 기기 스타일의 컨테이너 */
+.phone-container {
+  width: 100%;
+  max-width: 430px;
+  background-color: #ffffff;
+  /* 배경 변경을 위한 속성 추가 */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  transition: background-image 0.4s ease;
+  
+  height: 100vh;
+  position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+}
+.phone-container::-webkit-scrollbar {
+  display: none;
 }
 
-/* 상단 고정 헤더 */
-.top-fixed {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 15px;
-    background-color: #fff; /* 헤더는 흰색으로 구분 */
-    border-bottom: 1px solid #e0e0e0;
-    z-index: 30;
+/* 상단 고정 헤더 영역 */
+.sticky-header-wrapper {
+  position: absolute;
+  top: 0; left: 0; width: 100%;
+  background-color: #ffffff;
+  z-index: 10;
+  padding: 20px 24px 16px 24px;
+  border-bottom: 1px solid #e8e8e8;
+  transition: transform 0.4s ease-in-out, opacity 0.3s ease-in-out;
+  transform: translateY(0);
 }
-.back-button { 
-    background: none; 
-    border: none; 
-    cursor: pointer; 
-    color: #333; 
-    display: flex; 
-    align-items: center; 
-    margin-left: -5px;
+.sticky-header-wrapper.hide {
+  transform: translateY(-100%);
+  opacity: 0;
 }
-.header-title { 
-    font-size: 16px; 
-    font-weight: 700; 
-    color: #333; 
-}
-.header-right-empty { 
-    width: 24px; 
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.back-btn, .more-btn { font-size: 20px; cursor: pointer; color: #333; }
+.title-area { display: flex; flex-direction: column; gap: 4px; }
+.main-title { font-size: 20px; font-weight: 700; color: #111; }
+.created-date { font-size: 13px; color: #999; }
+
+/* 실제 콘텐츠 스크롤 영역 */
+.scroll-content {
+  padding: 180px 24px 80px 24px; 
+  display: flex; flex-direction: column; gap: 88px; 
 }
 
-/* ==============================================
-   보고서 내용 스크롤 영역
-   ============================================== */
-.report-content {
-    flex-grow: 1;
-    overflow-y: auto;
-    padding: 15px;
-    display: flex;
-    flex-direction: column;
-    gap: 15px; /* 각 통계 카드 사이의 간격 */
-    
-    /* 스크롤바 숨기기 */
-    -ms-overflow-style: none; /* IE/Edge */
-    scrollbar-width: none; /* Firefox */
+/* 각 섹션의 공통 구조 */
+.section { display: flex; flex-direction: column; gap: 14px; }
+.section.align-right { align-items: flex-end; }
+.section-title-wrap { display: flex; flex-direction: column; gap: 2px; }
+.section.align-right .section-title-wrap { align-items: flex-end; }
+
+/* 영어 제목 스타일 */
+.section-en-title {
+  font-family: 'MyCustomEnglishFont', sans-serif;
+  font-size: 28px; font-weight: 800; letter-spacing: -0.5px; color: #000;
 }
-.report-content::-webkit-scrollbar {
-    display: none; /* Chrome, Safari */
+.section-ko-title { font-size: 13px; font-weight: 500; color: #555; }
+
+/* 카드 공통 스타일 */
+.card-box {
+  width: 100%;
+  background: linear-gradient(135deg, #fbfbfb, #f5f5f5);
+  border: 1px solid #e2e2e2; border-radius: 12px; padding: 16px;
+  /* 배경 변경시 카드가 시각적으로 분리되도록 약간의 투명도 부여 */
+  background-color: rgba(255, 255, 255, 0.9);
 }
 
-/* 공통 카드 스타일 */
-.stat-card {
-    background-color: #fff;
-    border: 1px solid #e0e0e0;
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.03); /* 아주 연한 그림자 */
+/* 1. Favorite Artist 카드 */
+.artist-card { display: flex; align-items: center; gap: 16px; }
+.artist-img-wrapper {
+  width: 68px; height: 68px; border-radius: 50%; border: 1px solid #ddd;
+  background-color: #f0f0f0; display: flex; justify-content: center; align-items: center; overflow: hidden;
 }
-.card-title {
-    font-size: 15px;
-    font-weight: 700;
-    color: #222;
-    margin-bottom: 18px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
+.artist-img { width: 100%; height: 100%; object-fit: cover; }
+.artist-info { display: flex; flex-direction: column; gap: 4px; }
+.artist-name { font-size: 18px; font-weight: 800; }
+.artist-handle { font-size: 13px; color: #555; }
+
+/* 2. 노래 정보 스타일 */
+.song-wrapper { width: 100%; display: flex; flex-direction: column; gap: 12px; }
+.song-image-card { width: 100%; border-radius: 12px; overflow: hidden; aspect-ratio: 1.8 / 1; border: 1px solid #e2e2e2; }
+.song-image-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.song-info { display: flex; flex-direction: column; gap: 2px; }
+.section.align-right .song-info { align-items: flex-start; } 
+.song-title { font-size: 18px; font-weight: 800; color: #111; }
+.song-channel { font-size: 14px; font-weight: 500; color: #666; }
+
+/* 3. 차트 스타일 */
+.chart-card { height: 170px; display: flex; flex-direction: column; justify-content: flex-end; padding: 16px 20px 12px 20px; }
+.bar-chart-container { display: flex; align-items: flex-end; justify-content: space-between; width: 100%; height: 110px; gap: 3px; }
+.bar {
+  flex: 1; background-color: #e2e2e2; border-radius: 3px 3px 0 0;
+  transform-origin: bottom; transform: scaleY(0); transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+}
+.bar.highlight { background-color: #111; }
+.chart-labels { display: flex; justify-content: space-between; width: 100%; margin-top: 10px; font-size: 11px; color: #888; font-weight: 600; }
+
+/* 4. 좋아요/노래 리스트 아코디언 카드 스타일 */
+.likes-card {
+  display: flex; flex-direction: column; min-height: 130px; 
+  padding: 24px 20px 16px 20px; transition: all 0.4s ease;
+}
+.likes-top { flex: 1; }
+.likes-count { font-size: 34px; font-weight: 800; color: #111; }
+.likes-bottom { display: flex; justify-content: flex-end; }
+.expand-btn {
+  padding: 4px 8px; cursor: pointer; transition: transform 0.4s ease;
+  display: flex; align-items: center; justify-content: center;
+}
+.expand-btn.active { transform: rotate(180deg); }
+.arrow-down {
+  width: 0; height: 0;
+  border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid #000;
 }
 
-/* 1. 최애 아티스트 */
-.artist-container {
-    display: flex;
-    align-items: center;
-    gap: 15px;
+/* 펼쳐지는 노래 리스트 */
+.likes-details {
+  list-style: none; max-height: 0; opacity: 0; overflow: hidden;
+  transition: all 0.5s ease; font-size: 15px; color: #111; margin-top: 0;
 }
-.artist-img {
-    width: 65px;
-    height: 65px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid #f2f2f2;
+.likes-details.show {
+  max-height: 400px; opacity: 1; margin-top: 16px; 
+  border-top: 1px solid #ddd; padding-top: 8px; overflow-y: auto;
 }
-.artist-info { flex-grow: 1; }
-.artist-name { font-size: 18px; font-weight: 800; color: #333; margin-bottom: 4px; }
-.artist-desc { font-size: 13px; color: #666; }
-.artist-desc strong { color: #007bff; font-size: 14px; }
+.song-list-item { 
+  display: flex; align-items: center; gap: 14px; 
+  padding: 10px 0; border-bottom: 1px solid #f0f0f0; 
+}
+.song-list-item:last-child { border-bottom: none; }
+.song-list-thumb { width: 44px; height: 44px; border-radius: 6px; object-fit: cover; background-color: #e2e2e2; }
 
-/* 2. 많이 들은 노래 (TOP 3) */
-.song-list {
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
+/* 노래 제목 영역 확장 및 말줄임 표시 */
+.song-list-title { 
+  font-weight: 600; flex: 1; 
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
 }
-.song-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-.song-rank { font-size: 16px; font-weight: bold; width: 22px; text-align: center; }
-.rank-1 { color: #ff3b30; font-size: 18px; }
-.rank-2 { color: #ff9500; }
-.rank-3 { color: #34c759; }
 
-.song-thumb { width: 45px; height: 45px; border-radius: 6px; }
-.song-info { flex-grow: 1; }
-.song-title { font-size: 14px; font-weight: 600; color: #222; margin-bottom: 3px; }
-.song-artist { font-size: 12px; color: #777; }
-.song-count { font-size: 12px; font-weight: bold; color: #888; }
+/* 💡 심플하게 변경된 재생 버튼 (검은 원 삭제, 색상 조정) */
+.song-play-btn {
+  width: 32px; height: 32px;
+  background-color: transparent; /* 배경 투명 */
+  color: #333; /* 짙은 회색 삼각형 */
+  border: none;
+  display: flex; justify-content: center; align-items: center;
+  cursor: pointer;
+  transition: transform 0.2s ease, color 0.2s;
+}
+.song-play-btn:active { transform: scale(0.85); }
+.song-play-btn:hover { color: #000; }
 
-/* 3. 추천 피크 타임 */
-.peak-time-container {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    background-color: #f8f9fa;
-    padding: 15px;
-    border-radius: 8px;
+/* 🌟 복합 등장 스크롤 애니메이션 효과 */
+.animate-from-left {
+  opacity: 0;
+  transform: translate(-40px, 40px);
+  transition: opacity 0.8s ease-out, transform 0.8s ease-out;
 }
-.time-icon { font-size: 32px; }
-.time-info { flex-grow: 1; }
-.time-text { font-size: 16px; font-weight: 700; color: #007bff; margin-bottom: 4px; }
-.time-desc { font-size: 12px; color: #555; line-height: 1.4; }
+.animate-from-right {
+  opacity: 0;
+  transform: translate(40px, 40px);
+  transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+.animate-from-left.visible, .animate-from-right.visible {
+  opacity: 1;
+  transform: translate(0, 0); 
+}
 
-/* 4. 좋아요 누른 곡 리스트 */
-.like-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
+/* 더보기 드롭다운 스타일 */
+.more-options-container {
+  position: relative;
 }
-.like-header .card-title { margin-bottom: 0; }
-.like-total { font-size: 13px; color: #666; }
-.like-total strong { color: #ff3b30; font-size: 14px; }
+.more-dropdown {
+  position: absolute;
+  top: 30px; right: 0;
+  background: #ffffff;
+  border: 1px solid #e8e8e8;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  width: 140px;
+  display: none; 
+  flex-direction: column;
+  z-index: 100;
+  overflow: hidden;
+}
+.more-dropdown.show { display: flex; }
+.dropdown-item {
+  padding: 14px 16px;
+  font-size: 14px; font-weight: 500;
+  color: #333; cursor: pointer;
+  transition: background 0.2s ease;
+}
+.dropdown-item:hover { background: #f5f5f5; }
 
-.like-list {
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-bottom: 15px;
+/* 모달창 스타일 (제목 변경, 배경 변경 공통) */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  display: none; 
+  justify-content: center; align-items: center;
+  z-index: 9999;
+  opacity: 0; transition: opacity 0.3s ease;
 }
-.like-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid #f0f0f0;
+.modal-overlay.show { display: flex; opacity: 1; }
+.modal-box {
+  background: #ffffff;
+  width: 85%; max-width: 320px;
+  border-radius: 16px;
+  padding: 24px;
+  display: flex; flex-direction: column; gap: 16px;
+  transform: translateY(20px); transition: transform 0.3s ease;
 }
-.like-item:last-child { border-bottom: none; padding-bottom: 0; }
-.like-thumb {
-    width: 40px; height: 40px; border-radius: 6px; 
-    display: flex; justify-content: center; align-items: center; font-size: 16px;
+.modal-overlay.show .modal-box { transform: translateY(0); }
+.modal-box h3 { font-size: 18px; font-weight: 700; color: #111; }
+.modal-box input[type="text"] {
+  width: 100%; padding: 12px;
+  border: 1px solid #ddd; border-radius: 8px;
+  font-size: 15px; outline: none;
 }
-.like-info { flex-grow: 1; }
-.like-title { font-size: 13px; font-weight: 600; color: #222; margin-bottom: 3px; }
-.like-artist { font-size: 12px; color: #777; }
+.modal-box input[type="text"]:focus { border-color: #111; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.modal-actions button {
+  padding: 10px 16px; border-radius: 8px;
+  font-size: 14px; font-weight: 600; cursor: pointer; border: none;
+}
+.modal-cancel { background: #f0f0f0; color: #555; }
+.modal-save { background: #111; color: #fff; }
 
-.btn-more {
-    width: 100%;
-    padding: 12px;
-    background-color: #f0f0f0;
-    color: #444;
-    border: none;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-}
-.btn-more:hover { background-color: #e4e4e4; }
-
-/* 5. 취향이 비슷한 사람 */
-.similar-users {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-}
-.user-card {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    background-color: #f8f9fa;
-    padding: 15px 5px;
-    border-radius: 8px;
-    text-align: center;
-}
-.user-avatar, .default-avatar {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    object-fit: cover;
-    margin-bottom: 8px;
-}
-.default-avatar {
-    background-color: #ddd;
-    display: flex; justify-content: center; align-items: center; font-size: 24px;
-}
-.user-name { font-size: 13px; font-weight: 700; color: #333; margin-bottom: 6px; }
-.match-badge {
-    background-color: #e3f2fd;
-    color: #007bff;
-    font-size: 10px;
-    font-weight: 700;
-    padding: 3px 8px;
-    border-radius: 20px;
+/* 💡 배경 변경 모달의 미리보기 영역 스타일 */
+.bg-preview-area {
+  width: 100%; height: 150px;
+  border: 1px dashed #ccc; border-radius: 8px;
+  background-color: #fafafa;
+  display: flex; justify-content: center; align-items: center;
+  color: #999; font-size: 13px; font-weight: 500;
+  background-size: cover; background-position: center;
+  overflow: hidden;
 }
