@@ -6,6 +6,9 @@ let currentDate = dateParam ? new Date(dateParam) : new Date();
 let isFloating = false;
 currentDate.setHours(0, 0, 0, 0);
 
+// 📌 현재 답글을 달고 있는 부모 댓글의 시간 식별자를 임시 저장할 변수
+let currentReplyParentTime = null;
+
 document.addEventListener("DOMContentLoaded", async () => {
     
     // 🚨 1. 페이지가 켜지자마자 오늘 노래를 등록했는지 서버에 물어봅니다.
@@ -180,14 +183,16 @@ function renderFeedSongs(songs, playedSongs = []) {
                         <div class="video-info-overlay">
                             <div class="video-title" style="color: #ffffff;">${song.title || '제목 없음'}</div>
                         </div>
-                    </div>
+                </div>
                     <div class="info-area">
                         <div class="user" style="margin-bottom: 2px;">${infoName}</div>
                         <div style="font-size: 11px; color: rgba(0,0,0,0.4); margin-bottom: 8px; font-weight: 500;">@${song.login_id || '아이디 없음'}</div>
                         <div class="msg">${song.daily_comment || '등록된 코멘트가 없습니다.'}</div>
                         <div class="post-time">${song.log_date || ''} ${song.log_time || ''}</div>
+                        
                         <button class="comment-btn" data-song-id="${song.song_id}" aria-label="댓글">
                             <img src="../img/comment.png" alt="댓글">
+                            <span class="comment-count-num">${song.comment_count || 0}</span>
                         </button>
                     </div>
                 </div>
@@ -513,6 +518,10 @@ function changeMainGroup(groupId, groupName) {
             });
             const result = await res.json();
             if (result.success) {
+                // 📌 타이머 청소 안전장치 추가
+                if (typeof rollingIntervals === 'object') {
+                    Object.keys(rollingIntervals).forEach(id => clearInterval(rollingIntervals[id]));
+                }
                 location.reload(); 
             }
         } catch (err) {
@@ -604,6 +613,8 @@ function setupEventListeners() {
 // 댓글 모달 기능
 // ============================================================
 let currentCommentSongId = null;
+// 롤링 댓글 타이머 중복 방지용 보관함
+const rollingIntervals = {};
 
 function openCommentModal(songId) {
     currentCommentSongId = songId;
@@ -657,22 +668,61 @@ async function loadComments(songId) {
             return;
         }
 
+        // 📌 1. 댓글 수 카운트를 맨 위로 올려 0개일 때도 정상 반영되게 보정
+        const totalCount = data.comments ? data.comments.length : 0;
+        const countElement = document.getElementById('commentCount');
+        if (countElement) {
+            countElement.innerText = totalCount;
+        }
+
+        // 🔥 [치트키 추가] 대댓글 방식과 동일하게 메인 피드의 해당 노래 댓글 숫자도 실시간으로 똑같이 맞춰줍니다.
+        const $mainCountBadge = document.querySelector(`.comment-btn[data-song-id="${songId}"] .comment-count-num`);
+        if ($mainCountBadge) {
+            $mainCountBadge.innerText = totalCount;
+        }
+
         if (!data.comments || data.comments.length === 0) {
             listArea.innerHTML = '<div class="comment-empty">첫 댓글을 남겨보세요</div>';
             return;
         }
 
         listArea.innerHTML = '';
+
+        // 📌 2. 일반 댓글(부모)과 대댓글(자식) 분리 가공 (프론트엔드 직접 파싱)
+        // 📌 2. 일반 댓글(부모)과 대댓글(자식) 분리 가공 (엔터키 쳐도 고장 안 나게 수정!)
+        const parents = [];
+        const replies = [];
         data.comments.forEach(c => {
+            if (c.content && c.content.startsWith('[REPLY:')) {
+                const endIdx = c.content.indexOf(']');
+                if (endIdx > -1) {
+                    c.parent_id = c.content.substring(7, endIdx); // 부모 시간 추출
+                    c.content = c.content.substring(endIdx + 1);  // [REPLY:...] 태그 제외한 알맹이만 남김
+                    replies.push(c);
+                    return; // 대댓글 배열에 넣었으니 다음 댓글로 패스!
+                }
+            }
+            // 답글 형식이 아니거나, 예전에 썼던 답글이라 태그가 없으면 원댓글로 분류
+            parents.push(c);
+        });
+
+       // 📌 3. 부모 댓글 뿌리기 (기존 UI 스타일 유지 + 메인 입력창 연동 [답글달기] 수정)
+        parents.forEach(c => {
             const item = document.createElement('div');
             item.className = 'comment-item';
 
             const safeContent = escapeHtml(c.content);
             const safeUser = escapeHtml(c.username || '알 수 없음');
             const timeStr = formatCommentTime(c.created_at);
+            const rawTime = c.created_at || '';
+            const parentKey = rawTime.replace(/[^0-9]/g, ''); // 시간 기반 고유 식별 키
+
             const deleteBtn = (c.is_mine == 1)
                 ? `<button class="comment-item-delete" data-id="${c.comment_id}">삭제</button>`
                 : '';
+
+            // 📌 [답글달기] 클릭 시 toggleReplyForm 대신 focusReplyField가 호출되도록 변경 (시간과 닉네임을 넘겨줍니다)
+            const replyBtn = `<button class="comment-item-reply" onclick="focusReplyField('${rawTime}', '${escapeHtml(c.username)}')">답글달기</button>`;
 
             const groupBadge = c.group_name 
                 ? `<span style="font-size: 11px; color: #666; background: #e9ecef; padding: 2px 6px; border-radius: 8px; margin-left: 6px; font-weight: 600;">${escapeHtml(c.group_name)}</span>` 
@@ -686,14 +736,44 @@ async function loadComments(songId) {
                     </div>
                     <div style="display: flex; align-items: center;">
                         <span class="comment-item-time">${timeStr}</span>
+                        ${replyBtn}
                         ${deleteBtn}
                     </div>
                 </div>
                 <div class="comment-item-content">${safeContent}</div>
+
+                <div class="replies-container" id="replies-${parentKey}" style="margin-left: 20px; border-left: 2px solid #efefef; padding-left: 12px; margin-top: 8px;"></div>
             `;
             listArea.appendChild(item);
         });
+        // 📌 4. 대댓글(자식) 매칭 후 들여쓰기 꽂아넣기
+        replies.forEach(cc => {
+            const targetKey = cc.parent_id.replace(/[^0-9]/g, '');
+            const targetContainer = document.getElementById(`replies-${targetKey}`);
+            
+            if (targetContainer) {
+                const replyItem = document.createElement('div');
+                replyItem.style.cssText = 'margin-top:6px; font-size:13px; background:#f9f9f9; padding:6px 10px; border-radius:6px;';
+                
+                const deleteBtn = (cc.is_mine == 1) 
+                    ? `<button style="cursor:pointer; float:right; font-size:11px; background:none; border:none; color:#ff4d4f;" onclick="deleteComment(${cc.comment_id})">삭제</button>` 
+                    : '';
 
+                replyItem.innerHTML = `
+                    <div style="font-weight:bold; margin-bottom:2px; display:flex; justify-content:space-between;">
+                        <div>
+                            <span style="color:#007bff; font-weight:bold; margin-right:2px;">ㄴ</span> ${escapeHtml(cc.username)}
+                            <span style="font-weight:normal; font-size:11px; color:#999; margin-left:6px;">${formatCommentTime(cc.created_at)}</span>
+                        </div>
+                        ${deleteBtn}
+                    </div>
+                    <div style="padding-left:14px; color:#444;">${escapeHtml(cc.content)}</div>
+                `;
+                targetContainer.appendChild(replyItem);
+            }
+        });
+
+        // 기존의 일반 댓글 삭제 이벤트 바인딩 유지
         listArea.querySelectorAll('.comment-item-delete').forEach(btn => {
             btn.onclick = () => deleteComment(parseInt(btn.dataset.id));
         });
@@ -721,16 +801,32 @@ async function submitComment() {
     if (submitBtn) submitBtn.disabled = true;
 
     try {
+        // 📌 1. 백엔드로 보낼 기본 데이터를 오브젝트로 먼저 만듭니다.
+        let finalContent = content;
+        
+        // 📌 2. [변경] 답글달기를 누른 상태라면 내용 앞에 [REPLY:시간]을 강제로 붙여 보냅니다.
+        if (currentReplyParentTime) {
+            finalContent = `[REPLY:${currentReplyParentTime}]` + content;
+        }
+
+        const bodyData = { song_id: currentCommentSongId, content: finalContent };
+
         const res = await fetch('../php/api.php?action=add_comment', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ song_id: currentCommentSongId, content })
+            body: JSON.stringify(bodyData) // 📌 완성된 bodyData 패킷을 전송
         });
         const data = await res.json();
 
         if (data.success) {
             input.value = '';
+            
+            // 📌 3. [추가] 등록 성공 시 안내 문구를 명시적으로 원래대로 되돌립니다.
+            input.placeholder = '댓글을 입력하세요...'; 
+            
+            currentReplyParentTime = null; // 📌 등록 성공 시 대댓글 타겟팅 기억을 초기화합니다.
             await loadComments(currentCommentSongId);
+            await startRollingComments(currentCommentSongId);
         } else {
             alert(data.message || '등록 실패');
         }
@@ -741,8 +837,8 @@ async function submitComment() {
         if (submitBtn) submitBtn.disabled = false;
     }
 }
-
 function deleteComment(commentId) {
+    const targetSongId = currentCommentSongId; 
     showCustomModal('댓글을 삭제하시겠습니까?', async () => {
         try {
             const res = await fetch('../php/api.php?action=delete_comment', {
@@ -753,8 +849,9 @@ function deleteComment(commentId) {
             const data = await res.json();
 
             if (data.success) {
-                await loadComments(currentCommentSongId);
+                await loadComments(targetSongId);
                 showToast('댓글이 삭제되었습니다.'); 
+                await startRollingComments(targetSongId);
             } else {
                 alert(data.message || '삭제 실패');
             }
@@ -764,6 +861,19 @@ function deleteComment(commentId) {
         }
     });
 }
+
+window.focusReplyField = function(rawTime, username) {
+    const mainInput = document.getElementById('commentInput');
+    if (!mainInput) return;
+
+    // 1. 부모 시간은 뒤에서 조용히 기억
+    currentReplyParentTime = rawTime;
+
+    // 2. 입력창 내용은 깔끔하게 비우고, 배경 안내문구(placeholder)만 연한 회색으로 변경!
+    mainInput.value = ''; 
+    mainInput.placeholder = `${username}님에게 답글 남기는 중...`;
+    mainInput.focus();
+};
 
 function escapeHtml(str) {
     if (!str) return '';
@@ -850,20 +960,44 @@ function checkCommentPermission() {
 
 async function startRollingComments(songId) {
     try {
+        if (rollingIntervals[songId]) {
+            clearInterval(rollingIntervals[songId]); 
+            delete rollingIntervals[songId];
+        }
+
         const res = await fetch(`../php/api.php?action=get_comments&song_id=${songId}`);
         const data = await res.json();
 
-        if (!data.success || !data.comments || data.comments.length === 0) return;
+        const countLabel = document.getElementById(`comment-count-${songId}`);
+        const commentCount = (data.success && data.comment_count !== undefined) ? data.comment_count : 0;
+        
+        if (countLabel) {
+            countLabel.innerText = commentCount;
+        }
 
         const rollingBox = document.getElementById(`rolling-comment-${songId}`);
         if (!rollingBox) return;
 
+        if (!data.success || !data.comments || data.comments.length === 0) {
+            rollingBox.innerHTML = '';
+            rollingBox.style.opacity = '0';
+            rollingBox.style.display = 'none';
+            return;
+        }
+
+        rollingBox.style.display = 'block';
         const comments = data.comments;
         let currentIndex = 0;
 
         const displayComment = (comment) => {
             const safeUser = escapeHtml(comment.username || '익명');
-            const safeContent = escapeHtml(comment.content || '');
+            // 만약 롤링창에 표시될 댓글이 대댓글 표식을 가졌다면 필터링해서 알맹이만 보여줌
+            let contentToShow = comment.content || '';
+            if (contentToShow.startsWith('[REPLY:')) {
+                const match = contentToShow.match(/^\[REPLY:(.*?)\](.*)$/);
+                if (match) contentToShow = match[2];
+            }
+            const safeContent = escapeHtml(contentToShow);
             rollingBox.innerHTML = `<strong style="font-weight: 700; margin-right: 5px;">${safeUser}</strong>${safeContent}`;
         };
 
@@ -871,7 +1005,7 @@ async function startRollingComments(songId) {
         rollingBox.style.opacity = '1';
 
         if (comments.length > 1) {
-            setInterval(() => {
+            rollingIntervals[songId] = setInterval(() => {
                 rollingBox.style.opacity = '0'; 
                 setTimeout(() => {
                     currentIndex = (currentIndex + 1) % comments.length;
@@ -884,20 +1018,18 @@ async function startRollingComments(songId) {
         console.error('롤링 댓글 로드 실패:', err);
     }
 }
-
 // ============================================================
 // 🔥 공통 플로팅 미니 플레이어 & 전체 재생 모듈 
 // ============================================================
-const PlayAll = (() => {
+    const PlayAll = (() => {
     let player = null, apiReady = false, pendingStart = false;
     let pendingTime = 0, pendingAutoplay = false;
     let queue = [];      
     let pageQueue = [];  
     let currentIndex = -1, isPlaying = false, isExpanded = false;
     let playedSongIds = new Set();
-    
-    let $playAllBtn, $miniPlayer, $title, $sub, $thumb, $prev, $next, $playPause, $playPauseIcon, $queueList;
-    let isDragging = false, dragStartX = 0, dragStartY = 0, initialLeft = 0, initialTop = 0;
+
+    let $playAllBtn, $miniPlayer, $title, $sub, $thumb, $prev, $next, $playPause, $playPauseIcon, $queueList, $close; // 👈 $close 추가 완료!
 
     function extractYouTubeID(url) {
         const match = url ? url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i) : null;
@@ -929,10 +1061,12 @@ const PlayAll = (() => {
     function saveState() {
         if (queue.length === 0) return;
         const state = {
-            queue, currentIndex,
+            queue, 
+            currentIndex,
             playedSongIds: Array.from(playedSongIds),
-            currentTime: player && typeof player.getCurrentTime === 'function' ? player.getCurrentTime() : 0,
-            isPlaying, isExpanded
+            currentTime: player && typeof player.getCurrentTime === 'function' ? player.getCurrentTime() : 0, // 👈 객체 내부의 정상적인 속성으로 선언
+            isPlaying, 
+            isExpanded
         };
         sessionStorage.setItem('miniPlayerState', JSON.stringify(state));
     }
