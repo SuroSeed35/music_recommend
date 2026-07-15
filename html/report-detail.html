@@ -13,22 +13,22 @@
     <!-- 상단 헤더 -->
     <div class="sticky-header-wrapper" id="stickyHeader">
       <div class="header">
-        <span class="back-btn">&#60;</span>
+        <!-- 💡 뒤로가기 버튼 ID 추가 -->
+        <span class="back-btn" id="goBackBtn">&#60;</span>
         
-        <!-- 더보기 버튼 & 드롭다운 래퍼 -->
+        <!-- 더보기 버튼 & 드롭다운 -->
         <div class="more-options-container">
           <span class="more-btn" id="moreBtn">&#8943;</span>
           <div class="more-dropdown" id="moreDropdown">
             <div class="dropdown-item" id="editTitleBtn">제목 변경하기</div>
-            <!-- 배경 변경하기 메뉴 -->
             <div class="dropdown-item" id="changeBgBtn">배경 변경하기</div>
           </div>
         </div>
       </div>
 
       <div class="title-area">
-        <div class="main-title" id="mainTitleText">제목1</div>
-        <div class="created-date">생성일: 2026-07-09</div>
+        <div class="main-title" id="mainTitleText"></div>
+        <div class="created-date" id="createdDateText"></div>
       </div>
     </div>
 
@@ -45,11 +45,11 @@
         </div>
         <div class="card-box artist-card">
           <div class="artist-img-wrapper">
-            <img class="artist-img" src="https://images.unsplash.com/photo-1518020382113-a7e8fc38eac9?w=150" alt="artist profile">
+            <img class="artist-img" id="favArtistImg" src="../img/user-profile.jpg" alt="artist profile">
           </div>
           <div class="artist-info">
-            <span class="artist-name">집 가고 싶다.</span>
-            <span class="artist-handle">@i_want_to_go_home</span>
+            <span class="artist-name" id="favArtistName">정보 없음</span>
+            <span class="artist-handle" id="favArtistHandle">-</span>
           </div>
         </div>
       </div>
@@ -62,11 +62,11 @@
         </div>
         <div class="song-wrapper">
           <div class="song-image-card">
-            <img src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600" alt="Most-played song">
+            <img id="mostPlayedImg" src="../img/default-music.png" alt="Most-played song">
           </div>
           <div class="song-info">
-            <span class="song-title">Supernova</span>
-            <span class="song-channel">aespa</span>
+            <span class="song-title" id="mostPlayedTitle">기록이 없습니다</span>
+            <span class="song-channel" id="mostPlayedChannel">-</span>
           </div>
         </div>
       </div>
@@ -78,31 +78,9 @@
           <span class="section-ko-title">내가 가장 많이 추천한 시간대</span>
         </div>
         <div class="card-box chart-card">
-          <div class="bar-chart-container">
-            <div class="bar" style="height: 10%"></div>
-            <div class="bar" style="height: 5%"></div>
-            <div class="bar" style="height: 8%"></div>
-            <div class="bar" style="height: 2%"></div>
-            <div class="bar" style="height: 2%"></div>
-            <div class="bar" style="height: 10%"></div>
-            <div class="bar" style="height: 25%"></div>
-            <div class="bar" style="height: 40%"></div>
-            <div class="bar" style="height: 60%"></div>
-            <div class="bar" style="height: 50%"></div>
-            <div class="bar" style="height: 45%"></div>
-            <div class="bar highlight" style="height: 70%"></div>
-            <div class="bar highlight" style="height: 90%"></div>
-            <div class="bar highlight" style="height: 100%"></div>
-            <div class="bar highlight" style="height: 85%"></div>
-            <div class="bar" style="height: 60%"></div>
-            <div class="bar" style="height: 50%"></div>
-            <div class="bar" style="height: 40%"></div>
-            <div class="bar highlight" style="height: 75%"></div>
-            <div class="bar highlight" style="height: 80%"></div>
-            <div class="bar" style="height: 60%"></div>
-            <div class="bar" style="height: 45%"></div>
-            <div class="bar" style="height: 30%"></div>
-            <div class="bar" style="height: 15%"></div>
+          <!-- 💡 JS로 동적 제어할 수 있게 아이디 부여 -->
+          <div class="bar-chart-container" id="barChartContainer">
+            <!-- 24시간 바는 JS에서 자동 생성 및 높이 할당됨 -->
           </div>
           <div class="chart-labels">
             <span>00</span>
@@ -123,7 +101,7 @@
         
         <div class="card-box likes-card">
           <div class="likes-top">
-            <span class="likes-count">30개</span>
+            <span class="likes-count" id="totalLikesCount">0개</span>
           </div>
           <div class="likes-bottom">
             <div class="expand-btn" id="toggleListBtn">
@@ -132,28 +110,7 @@
           </div>
           
           <ul class="likes-details" id="expandableList">
-            <!-- 💡 배경 없는 깔끔한 삼각형 재생 버튼 -->
-            <li class="song-list-item">
-              <img class="song-list-thumb" src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=100" alt="song thumbnail">
-              <span class="song-list-title">How Sweet</span>
-              <button class="song-play-btn" aria-label="재생">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-              </button>
-            </li>
-            <li class="song-list-item">
-              <img class="song-list-thumb" src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=100" alt="song thumbnail">
-              <span class="song-list-title">Love Wins All</span>
-              <button class="song-play-btn" aria-label="재생">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-              </button>
-            </li>
-            <li class="song-list-item">
-              <img class="song-list-thumb" src="https://images.unsplash.com/photo-1493225457124-a1a2a53fb939?w=100" alt="song thumbnail">
-              <span class="song-list-title">밤양갱</span>
-              <button class="song-play-btn" aria-label="재생">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-              </button>
-            </li>
+            <!-- JS에서 DB 데이터로 동적 렌더링 됩니다. -->
           </ul>
         </div>
       </div>
@@ -173,19 +130,15 @@
     </div>
   </div>
 
-  <!-- 💡 배경 변경 모달창 -->
+  <!-- 배경 변경 모달창 -->
   <div class="modal-overlay" id="changeBgModal">
     <div class="modal-box">
       <h3>배경 이미지 변경</h3>
-      
-      <!-- 미리보기 영역 -->
       <div class="bg-preview-area" id="bgPreviewArea">
         <span id="bgPreviewText">이미지를 선택해주세요</span>
       </div>
-
       <div class="modal-actions" style="margin-top: 10px;">
         <button class="modal-cancel" id="cancelBgBtn">취소</button>
-        <!-- 파일 선택 버튼을 분리 -->
         <button class="modal-save" style="background:#555;" id="selectBgFileBtn">이미지 찾기</button>
         <button class="modal-save" id="saveBgBtn">적용</button>
       </div>

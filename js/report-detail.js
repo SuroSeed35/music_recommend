@@ -1,9 +1,106 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   
+  // URL에서 리포트 ID 가져오기
+  const urlParams = new URLSearchParams(window.location.search);
+  const reportId = urlParams.get('id');
+
+  if (!reportId) {
+    alert("잘못된 접근입니다.");
+    window.history.back();
+    return;
+  }
+
   const container = document.querySelector('.phone-container');
   const header = document.getElementById('stickyHeader');
+  
+  // ==========================================
+  // [1] 뒤로가기 버튼 로직
+  // ==========================================
+  const goBackBtn = document.getElementById('goBackBtn');
+  if (goBackBtn) {
+    goBackBtn.addEventListener('click', () => {
+      window.history.back();
+    });
+  }
 
-  // 1. 스크롤 방향 감지 및 헤더 온/오프 토글 기능
+  // ==========================================
+  // [2] DB 데이터 연동 (초기 로드)
+  // ==========================================
+  try {
+    const res = await fetch(`../php/report_detail_api.php?id=${reportId}`);
+    const data = await res.json();
+    
+    if (!data.success) {
+      alert(data.message);
+      window.history.back();
+      return;
+    }
+
+    // 1) 헤더 제목 및 "속 배경 이미지" 씌우기
+    document.getElementById('mainTitleText').innerText = data.report.title;
+    document.getElementById('createdDateText').innerText = `생성일: ${data.report.created_date}`;
+    
+    if (data.report.inner_image && data.report.inner_image !== '') {
+      container.style.backgroundImage = `url('${data.report.inner_image}')`;
+    }
+
+    // 2) 최애 아티스트 (유튜브 채널 기준)
+    if (data.favorite_artist) {
+      document.getElementById('favArtistName').innerText = data.favorite_artist.channel_name || '알 수 없는 채널';
+      document.getElementById('favArtistHandle').innerText = 'YouTube Channel'; // 고정 문구
+      if (data.favorite_artist.thumbnail_img) {
+        document.getElementById('favArtistImg').src = data.favorite_artist.thumbnail_img;
+      }
+    }
+
+    // 3) 가장 많이 들은 노래
+    if (data.most_played) {
+      document.getElementById('mostPlayedImg').src = data.most_played.thumbnail_img;
+      document.getElementById('mostPlayedTitle').innerText = data.most_played.title;
+      // 빈칸이었던 곳에 유튜브 채널 이름 채우기
+      document.getElementById('mostPlayedChannel').innerText = data.most_played.channel_name || '알 수 없는 채널';
+    }
+
+    // 4) 시간대별 차트 세팅
+    const chartContainer = document.getElementById('barChartContainer');
+    chartContainer.innerHTML = ''; 
+    data.time_data.forEach((cnt) => {
+      const pct = data.max_time_cnt > 0 ? (cnt / data.max_time_cnt) * 100 : 0;
+      const bar = document.createElement('div');
+      bar.className = 'bar' + (pct > 70 ? ' highlight' : '');
+      bar.style.height = `${pct}%`; 
+      chartContainer.appendChild(bar);
+    });
+
+    // 5) 이번 달 좋아요 누른 총 개수
+    document.getElementById('totalLikesCount').innerText = `${data.total_likes}개`;
+
+    // 6) 좋아요 노래 리스트 렌더링
+    const expandableList = document.getElementById('expandableList');
+    expandableList.innerHTML = '';
+    if (data.liked_songs && data.liked_songs.length > 0) {
+      data.liked_songs.forEach(song => {
+        expandableList.innerHTML += `
+          <li class="song-list-item">
+            <img class="song-list-thumb" src="${song.thumbnail_img}" alt="song thumbnail">
+            <span class="song-list-title">${song.title}</span>
+            <button class="song-play-btn" aria-label="재생">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+          </li>
+        `;
+      });
+    } else {
+      expandableList.innerHTML = `<li class="song-list-item"><span class="song-list-title" style="color:#999; text-align:center;">이번 달 좋아요 누른 기록이 없습니다.</span></li>`;
+    }
+
+  } catch (error) {
+    console.error("데이터 로드 실패:", error);
+  }
+
+  // ==========================================
+  // [3] UI 이벤트 및 애니메이션 관찰자
+  // ==========================================
   let lastScrollTop = 0;
   if (container && header) {
     container.addEventListener('scroll', () => {
@@ -17,12 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 2. 요소 진입 시 애니메이션 (왼쪽/오른쪽 동시 적용)
-  const observerOptions = { 
-    threshold: 0.1,
-    root: container
-  };
-
+  const observerOptions = { threshold: 0.1, root: container };
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
@@ -42,14 +134,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }, observerOptions);
 
-  const animatableElements = document.querySelectorAll('.animate-from-left, .animate-from-right');
-  animatableElements.forEach(el => observer.observe(el));
+  document.querySelectorAll('.animate-from-left, .animate-from-right').forEach(el => observer.observe(el));
 
-
-  // 3. 노래 리스트 펼치기(아코디언 토글)
   const toggleBtn = document.getElementById('toggleListBtn');
   const expandableList = document.getElementById('expandableList');
-
   if (toggleBtn && expandableList) {
     toggleBtn.addEventListener('click', () => {
       toggleBtn.classList.toggle('active');
@@ -57,18 +145,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-
-  // 4. 더보기 버튼 드롭다운 기능
   const moreBtn = document.getElementById('moreBtn');
   const moreDropdown = document.getElementById('moreDropdown');
-  
   if (moreBtn && moreDropdown) {
     moreBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       moreDropdown.classList.toggle('show');
     });
   }
-
   document.addEventListener('click', () => {
     if (moreDropdown && moreDropdown.classList.contains('show')) {
       moreDropdown.classList.remove('show');
@@ -76,7 +160,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
 
-  // 5. 제목 변경 모달창 기능
+  // ==========================================
+  // [4] 실제 DB 업데이트 로직 (제목 변경)
+  // ==========================================
   const editTitleBtn = document.getElementById('editTitleBtn');
   const editTitleModal = document.getElementById('editTitleModal');
   const cancelEditBtn = document.getElementById('cancelEditBtn');
@@ -90,37 +176,47 @@ document.addEventListener('DOMContentLoaded', () => {
       editTitleModal.classList.add('show');
     });
   }
-
-  if (cancelEditBtn && editTitleModal) {
-    cancelEditBtn.addEventListener('click', () => {
-      editTitleModal.classList.remove('show');
-    });
+  if (cancelEditBtn) {
+    cancelEditBtn.addEventListener('click', () => editTitleModal.classList.remove('show'));
   }
-
   if (editTitleModal) {
     editTitleModal.addEventListener('click', (e) => {
-      if (e.target === editTitleModal) {
-        editTitleModal.classList.remove('show');
-      }
+      if (e.target === editTitleModal) editTitleModal.classList.remove('show');
     });
   }
 
-  if (saveTitleBtn && editTitleModal && mainTitleText) {
-    saveTitleBtn.addEventListener('click', () => {
+  if (saveTitleBtn && mainTitleText) {
+    saveTitleBtn.addEventListener('click', async () => {
       const newTitle = newTitleInput.value.trim();
       if (newTitle !== "") {
-        mainTitleText.innerText = newTitle; 
+        const formData = new FormData();
+        formData.append('id', reportId);
+        formData.append('title', newTitle);
+
+        try {
+          const res = await fetch('../php/update_report.php', { method: 'POST', body: formData });
+          const result = await res.json();
+          if (result.success) {
+            mainTitleText.innerText = newTitle; 
+            editTitleModal.classList.remove('show'); 
+          } else {
+            alert(result.message);
+          }
+        } catch(e) {
+          console.error(e);
+          alert('제목 저장 중 오류가 발생했습니다.');
+        }
       }
-      editTitleModal.classList.remove('show'); 
     });
   }
 
 
-  // 6. 💡 배경 변경 모달창 & 미리보기 기능
+  // ==========================================
+  // [5] 실제 DB 업데이트 로직 (배경 변경)
+  // ==========================================
   const changeBgBtn = document.getElementById('changeBgBtn');
   const changeBgModal = document.getElementById('changeBgModal');
   const bgFileInput = document.getElementById('bgFileInput');
-  const phoneContainer = document.getElementById('phoneContainer');
   
   const selectBgFileBtn = document.getElementById('selectBgFileBtn');
   const cancelBgBtn = document.getElementById('cancelBgBtn');
@@ -129,64 +225,67 @@ document.addEventListener('DOMContentLoaded', () => {
   const bgPreviewArea = document.getElementById('bgPreviewArea');
   const bgPreviewText = document.getElementById('bgPreviewText');
 
-  let tempBgDataUrl = null; // 모달 내에서 임시로 이미지를 들고 있을 변수
-
-  // 메뉴에서 '배경 변경하기' 클릭 시 모달 열기
   if (changeBgBtn && changeBgModal) {
     changeBgBtn.addEventListener('click', () => {
-      // 열 때마다 임시 데이터 및 미리보기 박스 초기화
-      tempBgDataUrl = null;
+      bgFileInput.value = ''; 
       bgPreviewArea.style.backgroundImage = 'none';
       bgPreviewText.style.display = 'block'; 
       changeBgModal.classList.add('show');
     });
   }
 
-  // 모달 닫기 로직
-  if (cancelBgBtn && changeBgModal) {
-    cancelBgBtn.addEventListener('click', () => {
-      changeBgModal.classList.remove('show');
-    });
-  }
+  if (cancelBgBtn) cancelBgBtn.addEventListener('click', () => changeBgModal.classList.remove('show'));
   if (changeBgModal) {
     changeBgModal.addEventListener('click', (e) => {
-      if (e.target === changeBgModal) {
-        changeBgModal.classList.remove('show');
-      }
+      if (e.target === changeBgModal) changeBgModal.classList.remove('show');
     });
   }
 
-  // '이미지 찾기' 버튼을 누르면 숨겨진 input[type="file"] 클릭 연동
   if (selectBgFileBtn && bgFileInput) {
-    selectBgFileBtn.addEventListener('click', () => {
-      bgFileInput.click();
-    });
+    selectBgFileBtn.addEventListener('click', () => bgFileInput.click());
   }
 
-  // 파일 선택 시 FileReader로 미리보기에 적용
   if (bgFileInput) {
     bgFileInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (file && file.type.startsWith('image/')) {
         const reader = new FileReader();
         reader.onload = (event) => {
-          tempBgDataUrl = event.target.result;
-          bgPreviewArea.style.backgroundImage = `url('${tempBgDataUrl}')`;
-          bgPreviewText.style.display = 'none'; // '이미지를 선택해주세요' 텍스트 숨김
+          bgPreviewArea.style.backgroundImage = `url('${event.target.result}')`;
+          bgPreviewText.style.display = 'none';
         };
         reader.readAsDataURL(file);
       }
-      e.target.value = ''; // 초기화하여 같은 파일 재선택 가능하게 처리
     });
   }
 
-  // '적용' 버튼 클릭 시 실제 뷰에 배경 적용
-  if (saveBgBtn && phoneContainer) {
-    saveBgBtn.addEventListener('click', () => {
-      if (tempBgDataUrl) {
-        phoneContainer.style.backgroundImage = `url('${tempBgDataUrl}')`;
+  if (saveBgBtn && container) {
+    saveBgBtn.addEventListener('click', async () => {
+      const file = bgFileInput.files[0];
+      if (!file) {
+        alert("이미지를 선택해주세요.");
+        return;
       }
-      changeBgModal.classList.remove('show');
+
+      const formData = new FormData();
+      formData.append('id', reportId);
+      // 💡 여기서 'cover_image' 대신 'inner_image'를 서버로 전송합니다.
+      formData.append('inner_image', file);
+
+      try {
+        const res = await fetch('../php/update_report.php', { method: 'POST', body: formData });
+        const result = await res.json();
+
+        if (result.success) {
+          container.style.backgroundImage = `url('${result.inner_image}')`;
+          changeBgModal.classList.remove('show');
+        } else {
+          alert(result.message);
+        }
+      } catch(e) {
+        console.error(e);
+        alert('배경 저장 중 오류가 발생했습니다.');
+      }
     });
   }
 
