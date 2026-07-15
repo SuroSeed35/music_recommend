@@ -77,6 +77,49 @@ $liked_list_sql = "SELECT s.song_id, s.title, s.thumbnail_img
 $liked_list_res = mysqli_query($conn, $liked_list_sql);
 $liked_songs = mysqli_fetch_all($liked_list_res, MYSQLI_ASSOC);
 
+// 7. [신규] 이 달의 음악 무드 분석 (키워드 매칭)
+$mood_sql = "SELECT daily_comment FROM songs WHERE user_id = $my_id AND DATE_FORMAT(log_date, '%Y-%m') = '$target_month' AND daily_comment IS NOT NULL AND daily_comment != ''";
+$mood_res = mysqli_query($conn, $mood_sql);
+
+$mood_scores = ['energetic' => 0, 'sentimental' => 0, 'focus' => 0];
+
+// 카테고리별 키워드 사전
+$keywords = [
+    'energetic' => ['신나', '행복', '최고', '좋아', '즐거', '기분', '드라이브', '텐션', '파이팅', '화이팅', '여름', '댄스', '달려'],
+    'sentimental' => ['슬픈', '우울', '잔잔', '새벽', '위로', '눈물', '감성', '밤', '비', '생각', '그리움', '가을', '겨울'],
+    'focus' => ['운동', '출근', '퇴근', '노동', '힘내', '집중', '공부', '시작', '아침', '월요일', '헬스', '일']
+];
+
+while($row = mysqli_fetch_assoc($mood_res)) {
+    $comment = $row['daily_comment'];
+    foreach($keywords as $mood => $words) {
+        foreach($words as $word) {
+            if (mb_strpos($comment, $word) !== false) {
+                $mood_scores[$mood]++;
+            }
+        }
+    }
+}
+
+$dominant_mood = 'neutral';
+$max_score = 0;
+foreach($mood_scores as $mood => $score) {
+    if ($score > $max_score) {
+        $max_score = $score;
+        $dominant_mood = $mood;
+    }
+}
+
+// 무드별 결과 텍스트 및 이모지 매핑
+$mood_info = [
+    'energetic' => ['title' => '에너지 뿜뿜! 신나는 텐션', 'desc' => '이번 달은 기분 좋은 에너지가 가득했어요. 텐션을 올리는 활동과 함께 음악을 즐기셨네요!', 'emoji' => '🔥'],
+    'sentimental' => ['title' => '잔잔한 새벽 감성', 'desc' => '감수성이 풍부했던 한 달이었어요. 음악과 함께 깊은 생각에 잠기고 위로를 받는 시간이 많았네요.', 'emoji' => '🌙'],
+    'focus' => ['title' => '갓생러의 노동요', 'desc' => '이동시간이나 무언가에 집중할 때 음악이 큰 힘이 되었어요. 열심히 달려온 당신에게 박수를!', 'emoji' => '💻'],
+    'neutral' => ['title' => '다채로운 일상 플레이리스트', 'desc' => '특정 분위기에 치우치지 않고 그날그날의 기분에 따라 다양한 분위기의 음악을 골고루 즐긴 한 달이었어요.', 'emoji' => '🎧']
+];
+
+$user_mood = $mood_info[$dominant_mood];
+
 echo json_encode([
     'success' => true,
     'report' => $report,
@@ -85,7 +128,8 @@ echo json_encode([
     'time_data' => $time_data,
     'max_time_cnt' => $max_time_cnt,
     'total_likes' => $total_likes,
-    'liked_songs' => $liked_songs
+    'liked_songs' => $liked_songs,
+    'user_mood' => $user_mood
 ]);
 mysqli_close($conn);
 ?>

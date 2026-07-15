@@ -10,13 +10,9 @@
 
   <div class="phone-container" id="phoneContainer">
     
-    <!-- 상단 헤더 -->
     <div class="sticky-header-wrapper" id="stickyHeader">
       <div class="header">
-        <!-- 💡 뒤로가기 버튼 ID 추가 -->
         <span class="back-btn" id="goBackBtn">&#60;</span>
-        
-        <!-- 더보기 버튼 & 드롭다운 -->
         <div class="more-options-container">
           <span class="more-btn" id="moreBtn">&#8943;</span>
           <div class="more-dropdown" id="moreDropdown">
@@ -25,19 +21,16 @@
           </div>
         </div>
       </div>
-
       <div class="title-area">
         <div class="main-title" id="mainTitleText"></div>
         <div class="created-date" id="createdDateText"></div>
       </div>
     </div>
 
-    <!-- 배경 이미지 업로드를 위한 숨김 input -->
     <input type="file" id="bgFileInput" accept="image/*" style="display: none;">
 
     <div class="scroll-content">
       
-      <!-- 1. Favorite Artist -->
       <div class="section animate-from-left">
         <div class="section-title-wrap">
           <span class="section-en-title">Favorite Artist</span>
@@ -54,7 +47,6 @@
         </div>
       </div>
 
-      <!-- 2. Most-played songs -->
       <div class="section align-right animate-from-right">
         <div class="section-title-wrap">
           <span class="section-en-title">Most-played songs</span>
@@ -71,34 +63,40 @@
         </div>
       </div>
 
-      <!-- 3. Most recommended time -->
       <div class="section animate-from-left">
         <div class="section-title-wrap">
           <span class="section-en-title">Most recommended time</span>
           <span class="section-ko-title">내가 가장 많이 추천한 시간대</span>
         </div>
         <div class="card-box chart-card">
-          <!-- 💡 JS로 동적 제어할 수 있게 아이디 부여 -->
           <div class="bar-chart-container" id="barChartContainer">
-            <!-- 24시간 바는 JS에서 자동 생성 및 높이 할당됨 -->
-          </div>
+            </div>
           <div class="chart-labels">
-            <span>00</span>
-            <span>06</span>
-            <span>12</span>
-            <span>18</span>
-            <span>24</span>
+            <span>00</span><span>06</span><span>12</span><span>18</span><span>24</span>
           </div>
+        </div>
+        <div class="chart-summary-text" id="avgTimeText" style="text-align: center; margin-top: 14px; padding: 0 10px; font-size: 16px; font-weight: 600; color: #000; line-height: 1.5;">
+          평균 추천 시간: 계산 중...
         </div>
       </div>
 
-      <!-- 4. Total likes this month -->
       <div class="section align-right animate-from-right">
+        <div class="section-title-wrap">
+          <span class="section-en-title">Your Music Mood</span>
+          <span class="section-ko-title">이 달의 음악 무드</span>
+        </div>
+        <div class="card-box mood-card" style="text-align: center; padding: 40px 20px; background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(255, 255, 255, 0.1);">
+          <div id="moodEmoji" style="font-size: 65px; margin-bottom: 15px;">🎧</div>
+          <div id="moodTitle" style="font-size: 20px; font-weight: bold; color: #fff; margin-bottom: 10px;">분석 중...</div>
+          <div id="moodDesc" style="font-size: 14px; color: #ccc; line-height: 1.6; word-break: keep-all;">작성하신 한마디 데이터를 기반으로 무드를 분석하고 있습니다.</div>
+        </div>
+      </div>
+
+      <div class="section animate-from-left">
         <div class="section-title-wrap">
           <span class="section-en-title">Total likes this month</span>
           <span class="section-ko-title">이번 달 좋아요 누른 개수</span>
         </div>
-        
         <div class="card-box likes-card">
           <div class="likes-top">
             <span class="likes-count" id="totalLikesCount">0개</span>
@@ -108,17 +106,14 @@
               <span class="arrow-down"></span>
             </div>
           </div>
-          
           <ul class="likes-details" id="expandableList">
-            <!-- JS에서 DB 데이터로 동적 렌더링 됩니다. -->
-          </ul>
+            </ul>
         </div>
       </div>
 
     </div>
   </div>
 
-  <!-- 제목 변경 모달창 -->
   <div class="modal-overlay" id="editTitleModal">
     <div class="modal-box">
       <h3>제목 변경</h3>
@@ -130,7 +125,6 @@
     </div>
   </div>
 
-  <!-- 배경 변경 모달창 -->
   <div class="modal-overlay" id="changeBgModal">
     <div class="modal-box">
       <h3>배경 이미지 변경</h3>

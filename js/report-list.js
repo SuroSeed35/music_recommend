@@ -6,7 +6,57 @@ document.addEventListener("DOMContentLoaded", () => {
         backBtn.addEventListener('click', () => { window.history.back(); });
     }
 
+    // 초기 로드
     loadReportsFromDB();
+
+    // ==========================================
+    // 💡 검색어 표시 및 검색 실행 로직
+    // ==========================================
+    const searchInput = document.querySelector('.search-input');
+    const searchBtn = document.querySelector('.search-icon');
+    const displayDiv = document.getElementById('searchKeywordDisplay');
+    const wordSpan = document.getElementById('currentSearchWord');
+    const clearSearchBtn = document.getElementById('clearSearchBtn');
+
+    function performSearch() {
+        const keyword = searchInput ? searchInput.value.trim() : '';
+        
+        // 검색어가 있으면 UI에 텍스트를 띄우고, 없으면 숨깁니다.
+        if (keyword) {
+            if (displayDiv && wordSpan) {
+                displayDiv.style.display = 'block';
+                wordSpan.textContent = `'${keyword}'`;
+            }
+        } else {
+            if (displayDiv) displayDiv.style.display = 'none';
+        }
+        
+        // 검색어로 API 호출 (DB 필터링)
+        loadReportsFromDB(keyword);
+    }
+
+    // 돋보기 클릭 시 검색
+    if (searchBtn) {
+        searchBtn.addEventListener('click', performSearch);
+    }
+
+    // 엔터키 입력 시 검색
+    if (searchInput) {
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+    }
+
+    // '초기화 ✕' 버튼 클릭 시 검색 초기화
+    if (clearSearchBtn) {
+        clearSearchBtn.addEventListener('click', () => {
+            if (searchInput) searchInput.value = '';
+            performSearch(); // 빈 값으로 다시 조회 (전체 리스트 복구)
+        });
+    }
+    // ==========================================
 
     const dateMenu = document.querySelector('.date-picker-menu');
     const dateText = document.querySelector('.date-text');
@@ -71,7 +121,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // ★ 제목 변경 (체감 속도 개선 - 화면 먼저 닫고 서버 전송)
+    // 제목 변경
     const saveTitleBtn = document.getElementById('saveTitleBtn');
     if (saveTitleBtn) {
         saveTitleBtn.addEventListener('click', () => {
@@ -80,11 +130,9 @@ document.addEventListener("DOMContentLoaded", () => {
             if (newTitle.trim() !== '' && currentEditingItem) {
                 const reportId = currentEditingItem.dataset.id;
                 
-                // 1. 화면 즉시 변경 및 모달 닫기 (기다림 없이 바로!)
                 currentEditingItem.querySelector('.report-title').textContent = newTitle;
                 closeModal('titleModal');
 
-                // 2. 백그라운드 서버 전송
                 const formData = new FormData();
                 formData.append('id', reportId);
                 formData.append('title', newTitle);
@@ -111,7 +159,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // ★ 표지 변경 (체감 속도 개선 - 파일 선택 즉시 화면 덮고, 모달 닫고 업로드)
+    // 표지 변경
     const saveCoverBtn = document.getElementById('saveCoverBtn');
     if (saveCoverBtn) {
         saveCoverBtn.addEventListener('click', () => {
@@ -121,7 +169,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 const reportId = currentEditingItem.dataset.id;
                 const selectedFile = fileInput.files[0];
                 
-                // 1. 화면에 로컬 이미지를 즉시 미리보기 형태로 적용
                 const reader = new FileReader();
                 reader.onload = function(event) {
                     currentEditingItem.style.backgroundImage = `url('${event.target.result}')`;
@@ -129,10 +176,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
                 reader.readAsDataURL(selectedFile);
                 
-                // 2. 모달을 딜레이 없이 즉시 닫기
                 closeModal('coverModal');
 
-                // 3. 백그라운드 서버 업로드
                 const formData = new FormData();
                 formData.append('id', reportId);
                 formData.append('cover_image', selectedFile);
@@ -171,7 +216,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-// ★ 토스트 알림 속도 및 로직 개선
+// 토스트 알림
 function showToast(message) {
     let toast = document.getElementById("toast-notification");
     
@@ -190,7 +235,6 @@ function showToast(message) {
         toast.style.fontSize = "14px";
         toast.style.fontWeight = "500";
         toast.style.zIndex = "10000";
-        // 진입/퇴장 애니메이션 속도를 0.3초에서 0.15초로 더 빠르고 스무스하게 변경
         toast.style.transition = "all 0.15s ease-out"; 
         toast.style.opacity = "0";
         toast.style.pointerEvents = "none"; 
@@ -200,16 +244,13 @@ function showToast(message) {
 
     toast.textContent = message;
     
-    // 알림이 이미 떠 있을 때 또 누르면 타이머 초기화 (깜빡임 방지)
     if (toast.hideTimeout) clearTimeout(toast.hideTimeout);
 
-    // 알림 즉시 나타나기
     setTimeout(() => {
         toast.style.bottom = "40px";
         toast.style.opacity = "1";
     }, 10);
 
-    // 알림 머무는 시간 2.5초 -> 2초로 단축
     toast.hideTimeout = setTimeout(() => {
         toast.style.bottom = "-60px";
         toast.style.opacity = "0";
@@ -225,26 +266,34 @@ function closeModal(modalId) {
     if(modal) modal.classList.remove('active'); 
 }
 
-async function loadReportsFromDB() {
+// 💡 파라미터로 받은 검색어를 PHP로 전달
+async function loadReportsFromDB(keyword = '') {
     try {
-        const response = await fetch('../php/fetch_reports.php');
+        const url = keyword 
+            ? `../php/fetch_reports.php?search=${encodeURIComponent(keyword)}` 
+            : '../php/fetch_reports.php';
+            
+        const response = await fetch(url);
         const result = await response.json();
-        if (result.success) renderReports(result.data);
+        
+        if (result.success) renderReports(result.data, keyword);
         else console.error('보고서 목록 불러오기 실패:', result.message);
     } catch (error) {
         console.error('API 연결 에러:', error);
     }
 }
 
-function renderReports(reports) {
+// 💡 검색어가 있을 땐 맞춤형 "검색 결과 없음" 렌더링
+function renderReports(reports, keyword = '') {
     const reportGrid = document.getElementById('reportGrid');
     reportGrid.innerHTML = ''; 
 
     if (!reports || reports.length === 0) {
+        const emptyMsg = keyword ? `'${keyword}'에 대한 검색 결과가 없습니다.` : '보고서가 없습니다.';
         reportGrid.innerHTML = `
             <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding-top: 100px; color:#888;">
                 <div style="font-size:48px; margin-bottom:15px;">📭</div>
-                <p style="font-size:15px; font-weight:600; color:#555;">아직 보고서가 없습니다.</p>
+                <p style="font-size:15px; font-weight:600; color:#555; text-align:center;">${emptyMsg}</p>
             </div>
         `;
         return;
