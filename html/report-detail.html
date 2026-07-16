@@ -31,12 +31,20 @@
 
     <div class="scroll-content">
       
+      <div class="month-emoji-section animate-from-left">
+        <div class="month-emoji-title-wrap">
+          <span class="section-en-title">Month's Emoji</span>
+          <span class="section-ko-title">이달의 이모지</span>
+        </div>
+        <div class="month-emoji-box" id="topMoodBox"></div>
+      </div>
+
       <div class="section animate-from-left">
         <div class="section-title-wrap">
           <span class="section-en-title">Favorite Artist</span>
           <span class="section-ko-title">이 달의 최애 아티스트</span>
         </div>
-        <div class="card-box artist-card">
+        <div class="card-box artist-card" id="favArtistCard">
           <div class="artist-img-wrapper">
             <img class="artist-img" id="favArtistImg" src="../img/user-profile.jpg" alt="artist profile">
           </div>
@@ -138,6 +146,8 @@
       </div>
     </div>
   </div>
+
+  <div id="toastAlert" class="toast-alert">해당 채널을 찾을 수 없습니다.</div>
 
   <script src="../js/report-detail.js"></script>
 </body>

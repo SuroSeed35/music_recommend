@@ -34,12 +34,35 @@ document.addEventListener('DOMContentLoaded', async () => {
       container.style.backgroundImage = `url('${data.report.inner_image}')`;
     }
 
-    // 2) 최애 아티스트
-    if (data.favorite_artist) {
-      document.getElementById('favArtistName').innerText = data.favorite_artist.channel_name || '알 수 없는 채널';
+    // 2) 최애 아티스트 (유튜브 검색 이동 및 예외 Toast 처리)
+    const favArtistCard = document.getElementById('favArtistCard');
+    if (data.favorite_artist && data.favorite_artist.channel_name) {
+      const channelName = data.favorite_artist.channel_name;
+      document.getElementById('favArtistName').innerText = channelName;
       document.getElementById('favArtistHandle').innerText = 'YouTube Channel'; 
       if (data.favorite_artist.thumbnail_img) {
         document.getElementById('favArtistImg').src = data.favorite_artist.thumbnail_img;
+      }
+
+      // 채널이 존재할 때: 클릭 시 유튜브 검색 페이지 새 창 연동
+      if (favArtistCard) {
+        favArtistCard.style.cursor = 'pointer';
+        favArtistCard.onclick = () => {
+          const youtubeSearchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(channelName)}`;
+          window.open(youtubeSearchUrl, '_blank');
+        };
+      }
+    } else {
+      // 채널 데이터가 없거나 알 수 없는 경우: 기본 상태 처리 및 토스트 연결
+      document.getElementById('favArtistName').innerText = '정보 없음';
+      document.getElementById('favArtistHandle').innerText = '-';
+      document.getElementById('favArtistImg').src = '../img/user-profile.jpg';
+
+      if (favArtistCard) {
+        favArtistCard.style.cursor = 'pointer';
+        favArtistCard.onclick = () => {
+          showToast('해당 채널을 찾을 수 없습니다.');
+        };
       }
     }
 
@@ -81,35 +104,62 @@ document.addEventListener('DOMContentLoaded', async () => {
         const displayHour = avgHour % 12 === 0 ? 12 : avgHour % 12;
         const formattedMinute = String(avgMinute).padStart(2, '0');
 
-        // 💡 글자색 검정(#000), 크기 확대(18px), 텍스트 그림자(text-shadow) 삭제
         avgTimeTextEl.innerHTML = `이번 달 평균 추천 시간은 <span style="color: #000; font-size: 18px; font-weight: 800;">${ampm} ${displayHour}시 ${formattedMinute}분</span>입니다.`;
       } else {
         avgTimeTextEl.innerText = "이번 달 추천 기록이 없습니다.";
       }
     }
 
-    // 5) 이 달의 음악 무드 분석 적용
+    // 5) 이 달의 음악 무드 분석 적용 및 아티스트 위 이모지 표기
     if (data.user_mood) {
       document.getElementById('moodEmoji').innerText = data.user_mood.emoji;
       document.getElementById('moodTitle').innerText = data.user_mood.title;
       document.getElementById('moodDesc').innerText = data.user_mood.desc;
+
+      // 아티스트 상단 박스에 5개 이모지 동적 구성
+      const topMoodBox = document.getElementById('topMoodBox');
+      if (topMoodBox && data.user_mood.emojis_five) {
+        topMoodBox.innerHTML = ''; // 초기화
+        
+        // 이모지 유니코드 안전 분할 처리
+        const emojiArray = Array.from(data.user_mood.emojis_five);
+        emojiArray.forEach(emo => {
+          const span = document.createElement('span');
+          span.className = 'top-mood-emoji';
+          span.innerText = emo;
+          topMoodBox.appendChild(span);
+        });
+        topMoodBox.style.display = 'flex'; // 이모지 로드 완료 후 표시
+      }
     }
 
-    // 6) 좋아요 리스트
+    // 6) 좋아요 리스트 (재생 버튼 클릭 시 달력 이동 연동)
     document.getElementById('totalLikesCount').innerText = `${data.total_likes}개`;
     const expandableList = document.getElementById('expandableList');
     expandableList.innerHTML = '';
+    
     if (data.liked_songs && data.liked_songs.length > 0) {
       data.liked_songs.forEach(song => {
-        expandableList.innerHTML += `
-          <li class="song-list-item">
-            <img class="song-list-thumb" src="${song.thumbnail_img}" alt="song thumbnail">
-            <span class="song-list-title">${song.title}</span>
-            <button class="song-play-btn" aria-label="재생">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-            </button>
-          </li>
+        const li = document.createElement('li');
+        li.className = 'song-list-item';
+        li.innerHTML = `
+          <img class="song-list-thumb" src="${song.thumbnail_img}" alt="song thumbnail">
+          <span class="song-list-title">${song.title}</span>
+          <button class="song-play-btn" aria-label="재생" style="cursor: pointer;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          </button>
         `;
+
+        const playBtn = li.querySelector('.song-play-btn');
+        playBtn.addEventListener('click', () => {
+          if (song.log_date) {
+            window.location.href = `calendar.html?date=${song.log_date}`;
+          } else {
+            alert('해당 노래의 달력 등록 날짜 정보가 존재하지 않습니다.');
+          }
+        });
+
+        expandableList.appendChild(li);
       });
     } else {
       expandableList.innerHTML = `<li class="song-list-item"><span class="song-list-title" style="color:#999; text-align:center;">이번 달 좋아요 누른 기록이 없습니다.</span></li>`;
@@ -167,7 +217,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.addEventListener('click', () => {
     if (moreDropdown && moreDropdown.classList.contains('show')) moreDropdown.classList.remove('show');
   });
-
 
   // [4] DB 업데이트 (제목 변경)
   const editTitleBtn = document.getElementById('editTitleBtn');
@@ -268,3 +317,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 });
+
+// [6] 토스트 안내창 유틸리티 함수 구현
+function showToast(message) {
+  const toast = document.getElementById('toastAlert');
+  if (toast) {
+    toast.innerText = message;
+    toast.classList.add('show');
+    
+    // 2초 뒤 서서히 사라짐 처리
+    setTimeout(() => {
+      toast.classList.remove('show');
+    }, 2000);
+  }
+}

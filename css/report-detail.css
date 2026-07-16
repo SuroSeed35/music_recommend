@@ -39,12 +39,10 @@ body {
   width: 100%;
   max-width: 430px;
   background-color: #ffffff;
-  /* 배경 변경을 위한 속성 추가 */
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
   transition: background-image 0.4s ease;
-  
   height: 100vh;
   position: relative;
   overflow-y: auto;
@@ -95,12 +93,50 @@ body {
 }
 .section-ko-title { font-size: 13px; font-weight: 500; color: #555; }
 
+
+/* 🌟 최상단 이달의 이모지 영역 스타일 (간격 및 디자인 수정) */
+.month-emoji-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* 가로 중앙 정렬 */
+  margin-bottom: -10px; /* 기존 -40px에서 수정하여 아래쪽 간격을 훨씬 넓힘 */
+  width: 100%;
+}
+.month-emoji-title-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* 가운데 정렬 */
+  gap: 2px;
+  margin-bottom: 16px;
+}
+.month-emoji-title-wrap .section-ko-title {
+  text-shadow: 0 1px 3px rgba(255,255,255,0.8); /* 배경이 어두워도 잘 보이게 보정 */
+}
+
+.month-emoji-box {
+  display: none; /* 데이터 로드 전 숨김 */
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #fbfbfb, #f5f5f5);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 40px; /* 타원형 느낌이 나게 부드러운 둥근 모서리 */
+  padding: 16px 44px; /* <--- 양끝 간격(padding 좌우)을 24px에서 44px로 대폭 넓힘 */
+  gap: 16px; /* 이모지 사이 여백 */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: solid 0.5px rgba(60, 67, 75, 0.721);
+}
+.top-mood-emoji {
+  font-size: 34px; /* 이모지 크기 확대 */
+  line-height: 1;
+}
+
+
 /* 카드 공통 스타일 */
 .card-box {
   width: 100%;
   background: linear-gradient(135deg, #fbfbfb, #f5f5f5);
   border: 1px solid #e2e2e2; border-radius: 12px; padding: 16px;
-  /* 배경 변경시 카드가 시각적으로 분리되도록 약간의 투명도 부여 */
   background-color: rgba(255, 255, 255, 0.9);
 }
 
@@ -168,17 +204,15 @@ body {
 .song-list-item:last-child { border-bottom: none; }
 .song-list-thumb { width: 44px; height: 44px; border-radius: 6px; object-fit: cover; background-color: #e2e2e2; }
 
-/* 노래 제목 영역 확장 및 말줄임 표시 */
 .song-list-title { 
   font-weight: 600; flex: 1; 
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
 }
 
-/* 💡 심플하게 변경된 재생 버튼 (검은 원 삭제, 색상 조정) */
 .song-play-btn {
   width: 32px; height: 32px;
-  background-color: transparent; /* 배경 투명 */
-  color: #333; /* 짙은 회색 삼각형 */
+  background-color: transparent;
+  color: #333;
   border: none;
   display: flex; justify-content: center; align-items: center;
   cursor: pointer;
@@ -204,73 +238,53 @@ body {
 }
 
 /* 더보기 드롭다운 스타일 */
-.more-options-container {
-  position: relative;
-}
+.more-options-container { position: relative; }
 .more-dropdown {
-  position: absolute;
-  top: 30px; right: 0;
-  background: #ffffff;
-  border: 1px solid #e8e8e8;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  width: 140px;
-  display: none; 
-  flex-direction: column;
-  z-index: 100;
-  overflow: hidden;
+  position: absolute; top: 30px; right: 0;
+  background: #ffffff; border: 1px solid #e8e8e8; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 8px; width: 140px; display: none; flex-direction: column; z-index: 100; overflow: hidden;
 }
 .more-dropdown.show { display: flex; }
 .dropdown-item {
-  padding: 14px 16px;
-  font-size: 14px; font-weight: 500;
-  color: #333; cursor: pointer;
-  transition: background 0.2s ease;
+  padding: 14px 16px; font-size: 14px; font-weight: 500; color: #333; cursor: pointer; transition: background 0.2s ease;
 }
 .dropdown-item:hover { background: #f5f5f5; }
 
-/* 모달창 스타일 (제목 변경, 배경 변경 공통) */
+/* 모달창 스타일 */
 .modal-overlay {
-  position: fixed;
-  top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0, 0, 0, 0.4);
-  display: none; 
-  justify-content: center; align-items: center;
-  z-index: 9999;
-  opacity: 0; transition: opacity 0.3s ease;
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4);
+  display: none; justify-content: center; align-items: center; z-index: 9999; opacity: 0; transition: opacity 0.3s ease;
 }
 .modal-overlay.show { display: flex; opacity: 1; }
 .modal-box {
-  background: #ffffff;
-  width: 85%; max-width: 320px;
-  border-radius: 16px;
-  padding: 24px;
-  display: flex; flex-direction: column; gap: 16px;
-  transform: translateY(20px); transition: transform 0.3s ease;
+  background: #ffffff; width: 85%; max-width: 320px; border-radius: 16px; padding: 24px;
+  display: flex; flex-direction: column; gap: 16px; transform: translateY(20px); transition: transform 0.3s ease;
 }
 .modal-overlay.show .modal-box { transform: translateY(0); }
 .modal-box h3 { font-size: 18px; font-weight: 700; color: #111; }
 .modal-box input[type="text"] {
-  width: 100%; padding: 12px;
-  border: 1px solid #ddd; border-radius: 8px;
-  font-size: 15px; outline: none;
+  width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; outline: none;
 }
 .modal-box input[type="text"]:focus { border-color: #111; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .modal-actions button {
-  padding: 10px 16px; border-radius: 8px;
-  font-size: 14px; font-weight: 600; cursor: pointer; border: none;
+  padding: 10px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none;
 }
 .modal-cancel { background: #f0f0f0; color: #555; }
 .modal-save { background: #111; color: #fff; }
 
-/* 💡 배경 변경 모달의 미리보기 영역 스타일 */
 .bg-preview-area {
-  width: 100%; height: 150px;
-  border: 1px dashed #ccc; border-radius: 8px;
-  background-color: #fafafa;
-  display: flex; justify-content: center; align-items: center;
-  color: #999; font-size: 13px; font-weight: 500;
-  background-size: cover; background-position: center;
-  overflow: hidden;
+  width: 100%; height: 150px; border: 1px dashed #ccc; border-radius: 8px; background-color: #fafafa;
+  display: flex; justify-content: center; align-items: center; color: #999; font-size: 13px; font-weight: 500;
+  background-size: cover; background-position: center; overflow: hidden;
 }
+
+/* 토스트 알림창 스타일 */
+.toast-alert {
+  position: fixed; bottom: 80px; left: 50%; transform: translate(-50%, 20px);
+  background-color: rgba(0, 0, 0, 0.85); color: #fff; padding: 12px 24px; border-radius: 30px;
+  font-size: 14px; font-weight: bold; z-index: 10000; opacity: 0; visibility: hidden;
+  transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
+}
+.toast-alert.show { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
