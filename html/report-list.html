@@ -4,12 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Report List</title>
+    <!-- CSS 및 JS 경로가 실제 프로젝트 환경과 맞는지 확인해 주세요 -->
     <link rel="stylesheet" href="../css/report-list.css">
     <script src="../js/report-list.js" defer></script>
 </head>
 <body>
     <div class="app-container">
         
+        <!-- 상단 고정 영역 -->
         <div class="top-fixed-section">
             <header class="header">
                 <button class="back-button" aria-label="뒤로가기">
@@ -19,9 +21,10 @@
                 </button>
             </header>
 
+            <!-- 검색 영역 -->
             <div class="search-container">
                 <input type="text" class="search-input" placeholder="검색하기">
-                <button class="search-icon">
+                <button class="search-icon" aria-label="검색">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="11" cy="11" r="8"></circle>
                         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
@@ -29,37 +32,72 @@
                 </button>
             </div>
 
+            <!-- 검색 결과 표시 영역 -->
             <div id="searchKeywordDisplay" style="display: none; text-align: left; margin: 10px 0 0 20px; font-size: 14px; color: #ccc;">
                 <span id="currentSearchWord" style="color: #ff4757; font-weight: bold;"></span> 검색 결과
                 <span id="clearSearchBtn" style="margin-left: 10px; cursor: pointer; color: #888; font-size: 12px; border: 1px solid #555; padding: 2px 8px; border-radius: 12px; background: rgba(255,255,255,0.05); transition: 0.2s;">초기화 ✕</span>
             </div>
 
-            <details class="date-picker-menu">
-                <summary class="date-summary">
-                    <svg class="calendar-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                        <line x1="16" y1="2" x2="16" y2="6"></line>
-                        <line x1="8" y1="2" x2="8" y2="6"></line>
-                        <line x1="3" y1="10" x2="21" y2="10"></line>
+            <!-- 💡 검색대 아래: 날짜 선택 영역 & 보고서 추가(+) 버튼 -->
+            <div class="action-row" style="display: flex; justify-content: space-between; align-items: center; margin: 15px 20px 0;">
+                <details class="date-picker-menu" style="margin: 0;">
+                    <summary class="date-summary">
+                        <svg class="calendar-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                        <span class="date-text">2026-07</span>
+                    </summary>
+                    <div class="date-dropdown-lists">
+                        <ul class="year-list">
+                            <li>2024</li>
+                            <li>2025</li>
+                            <li class="selected">2026</li>
+                            <li>2027</li>
+                        </ul>
+                        <ul class="month-list">
+                            <li>05</li>
+                            <li>06</li>
+                            <li class="selected">07</li>
+                            <li>08</li>
+                            <li>09</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <!-- 검색대 아래로 이동한 + 버튼 -->
+                <button class="add-report-btn" aria-label="보고서 추가" style="background: #333; color: #fff; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
                     </svg>
-                    <span class="date-text">2026-07</span>
-                </summary>
-                <div class="date-dropdown-lists">
-                    <ul class="year-list">
-                        <li>2024</li><li>2025</li><li class="selected">2026</li><li>2027</li>
-                    </ul>
-                    <ul class="month-list">
-                        <li>05</li><li>06</li><li class="selected">07</li><li>08</li><li>09</li>
-                    </ul>
-                </div>
-            </details>
+                </button>
+            </div>
         </div>
 
+        <!-- 리포트 목록이 동적으로 삽입되는 영역 (JS가 제어) -->
         <div class="report-list-content" id="reportGrid">
-            </div>
+            <!-- 자바스크립트에 의해 이 안에 grid-item(리포트)들이 생성됩니다 -->
+        </div>
 
     </div>
 
+    <!-- 모달: 새 보고서 생성 -->
+    <div class="modal-overlay" id="createReportModal">
+        <div class="modal-content">
+            <h3>새 보고서 생성</h3>
+            <p style="font-size: 13px; color: #666; margin-bottom: 15px;">보고서를 생성할 연도와 월을 선택해주세요.<br>(해당 달에 기록된 음악이 있어야 합니다.)</p>
+            <input type="month" id="newReportMonth" class="modal-input" style="padding: 10px; width: 100%; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; margin-bottom: 15px; box-sizing: border-box;">
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal('createReportModal')">취소</button>
+                <button class="btn-save" id="confirmCreateReportBtn">생성</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 모달: 제목 변경 -->
     <div class="modal-overlay" id="titleModal">
         <div class="modal-content">
             <h3>제목 변경하기</h3>
@@ -71,6 +109,7 @@
         </div>
     </div>
 
+    <!-- 모달: 표지 변경 -->
     <div class="modal-overlay" id="coverModal">
         <div class="modal-content">
             <h3>표지 변경하기</h3>
@@ -83,6 +122,7 @@
         </div>
     </div>
 
+    <!-- 모달: 세부사항 확인 -->
     <div class="modal-overlay" id="detailsModal">
         <div class="modal-content">
             <h3>세부사항</h3>
@@ -96,5 +136,9 @@
             </div>
         </div>
     </div>
+
+    <!-- 토스트 알림 메시지용 컨테이너 -->
+    <div id="toast-notification" style="position: fixed; bottom: -60px; left: 50%; transform: translateX(-50%); background-color: rgba(40, 40, 40, 0.9); color: #ffffff; padding: 12px 24px; border-radius: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-size: 14px; font-weight: 500; z-index: 10000; transition: all 0.15s ease-out; opacity: 0; pointer-events: none; white-space: nowrap;"></div>
+
 </body>
 </html>

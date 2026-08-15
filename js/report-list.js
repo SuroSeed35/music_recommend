@@ -1,4 +1,6 @@
 let currentEditingItem = null;
+let reportToDeleteId = null;   // 삭제할 리포트 ID를 저장할 변수
+let reportToDeleteItem = null; // 삭제할 HTML 요소를 저장할 변수
 
 document.addEventListener("DOMContentLoaded", () => {
     const backBtn = document.querySelector('.back-button');
@@ -10,7 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
     loadReportsFromDB();
 
     // ==========================================
-    // 💡 검색어 표시 및 검색 실행 로직
+    // 검색어 표시 및 검색 실행 로직
     // ==========================================
     const searchInput = document.querySelector('.search-input');
     const searchBtn = document.querySelector('.search-icon');
@@ -21,7 +23,6 @@ document.addEventListener("DOMContentLoaded", () => {
     function performSearch() {
         const keyword = searchInput ? searchInput.value.trim() : '';
         
-        // 검색어가 있으면 UI에 텍스트를 띄우고, 없으면 숨깁니다.
         if (keyword) {
             if (displayDiv && wordSpan) {
                 displayDiv.style.display = 'block';
@@ -31,16 +32,13 @@ document.addEventListener("DOMContentLoaded", () => {
             if (displayDiv) displayDiv.style.display = 'none';
         }
         
-        // 검색어로 API 호출 (DB 필터링)
         loadReportsFromDB(keyword);
     }
 
-    // 돋보기 클릭 시 검색
     if (searchBtn) {
         searchBtn.addEventListener('click', performSearch);
     }
 
-    // 엔터키 입력 시 검색
     if (searchInput) {
         searchInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
@@ -49,15 +47,16 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // '초기화 ✕' 버튼 클릭 시 검색 초기화
     if (clearSearchBtn) {
         clearSearchBtn.addEventListener('click', () => {
             if (searchInput) searchInput.value = '';
-            performSearch(); // 빈 값으로 다시 조회 (전체 리스트 복구)
+            performSearch(); 
         });
     }
-    // ==========================================
 
+    // ==========================================
+    // 날짜 선택 로직
+    // ==========================================
     const dateMenu = document.querySelector('.date-picker-menu');
     const dateText = document.querySelector('.date-text');
     const yearItems = document.querySelectorAll('.year-list li');
@@ -90,6 +89,9 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
+    // ==========================================
+    // 리포트 항목 클릭 및 드롭다운 메뉴 제어
+    // ==========================================
     const reportGrid = document.getElementById('reportGrid');
     if (reportGrid) {
         reportGrid.addEventListener('click', (e) => {
@@ -99,29 +101,79 @@ document.addEventListener("DOMContentLoaded", () => {
             if (e.target.closest('.more-menu')) {
                 if (e.target.tagName === 'LI') {
                     currentEditingItem = gridItem; 
+                    
+                    // 1. 제목 변경
                     if (e.target.classList.contains('menu-edit-title')) {
                         document.getElementById('titleInput').value = gridItem.querySelector('.report-title').textContent;
                         openModal('titleModal');
                     }
+                    // 2. 표지 변경
                     if (e.target.classList.contains('menu-edit-cover')) {
                         document.getElementById('coverFileInput').value = ''; 
                         openModal('coverModal');
                     }
+                    // 3. 세부사항
                     if (e.target.classList.contains('menu-show-details')) {
                         document.getElementById('detailDate').textContent = gridItem.dataset.date || '-';
                         document.getElementById('detailSize').textContent = gridItem.dataset.size || '알 수 없음';
                         openModal('detailsModal');
                     }
+                    // 4. 리포트 삭제 (알림창 모달 띄우기)
+                    if (e.target.classList.contains('menu-delete-report')) {
+                        reportToDeleteId = gridItem.dataset.id;
+                        reportToDeleteItem = gridItem;
+                        openModal('deleteConfirmModal');
+                    }
+                    
                     e.target.closest('.more-menu').removeAttribute('open');
                 }
                 return; 
             }
+            
+            // 메뉴가 아닌 아이템 본문을 클릭하면 상세 페이지로 이동
             const reportId = gridItem.dataset.id;
             window.location.href = `report-detail.html?id=${reportId}`;
         });
     }
 
+    // ==========================================
+    // 삭제 모달: 삭제 확인 버튼 로직
+    // ==========================================
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    if (confirmDeleteBtn) {
+        confirmDeleteBtn.addEventListener('click', () => {
+            if (!reportToDeleteId) return;
+
+            fetch('../php/delete_report.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: reportToDeleteId })
+            })
+            .then(res => res.json())
+            .then(result => {
+                if (result.success) {
+                    showToast('리포트가 성공적으로 삭제되었습니다.');
+                    if (reportToDeleteItem) {
+                        reportToDeleteItem.remove(); // 화면에서 요소 삭제
+                    }
+                    const currentKeyword = searchInput ? searchInput.value.trim() : '';
+                    loadReportsFromDB(currentKeyword); // 빈 화면 등 재처리
+                } else {
+                    showToast('삭제 실패: ' + (result.message || '알 수 없는 오류'));
+                }
+                closeModal('deleteConfirmModal'); // 모달 닫기
+            })
+            .catch(error => {
+                console.error('리포트 삭제 에러:', error);
+                showToast('서버와의 통신에 실패했습니다.');
+                closeModal('deleteConfirmModal');
+            });
+        });
+    }
+
+    // ==========================================
     // 제목 변경
+    // ==========================================
     const saveTitleBtn = document.getElementById('saveTitleBtn');
     if (saveTitleBtn) {
         saveTitleBtn.addEventListener('click', () => {
@@ -159,7 +211,9 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // ==========================================
     // 표지 변경
+    // ==========================================
     const saveCoverBtn = document.getElementById('saveCoverBtn');
     if (saveCoverBtn) {
         saveCoverBtn.addEventListener('click', () => {
@@ -204,6 +258,54 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // ==========================================
+    // 보고서 추가 (+) 버튼 로직
+    // ==========================================
+    const addReportBtn = document.querySelector('.add-report-btn');
+    if (addReportBtn) {
+        addReportBtn.addEventListener('click', () => {
+            document.getElementById('newReportMonth').value = ''; 
+            openModal('createReportModal');
+        });
+    }
+
+    const confirmCreateReportBtn = document.getElementById('confirmCreateReportBtn');
+    if (confirmCreateReportBtn) {
+        confirmCreateReportBtn.addEventListener('click', () => {
+            const targetMonth = document.getElementById('newReportMonth').value;
+            
+            if (!targetMonth) {
+                showToast('보고서를 생성할 달을 선택해주세요.');
+                return;
+            }
+
+            fetch('../php/create_custom_report.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ target_month: targetMonth })
+            })
+            .then(res => res.json())
+            .then(result => {
+                if (result.success) {
+                    showToast('보고서가 성공적으로 생성되었습니다.');
+                    closeModal('createReportModal');
+                    
+                    const currentKeyword = searchInput ? searchInput.value.trim() : '';
+                    loadReportsFromDB(currentKeyword);
+                } else {
+                    showToast(result.message || '보고서 생성 실패');
+                }
+            })
+            .catch(error => {
+                console.error('보고서 생성 에러:', error);
+                showToast('서버와의 통신에 실패했습니다.');
+            });
+        });
+    }
+
+    // 외부 영역 클릭 시 메뉴 닫기
     document.addEventListener('click', (e) => {
         if (dateMenu && !dateMenu.contains(e.target)) dateMenu.removeAttribute('open');
         const moreMenus = document.querySelectorAll('.more-menu');
@@ -216,7 +318,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-// 토스트 알림
+// ==========================================
+// 공통 유틸 함수
+// ==========================================
 function showToast(message) {
     let toast = document.getElementById("toast-notification");
     
@@ -266,7 +370,9 @@ function closeModal(modalId) {
     if(modal) modal.classList.remove('active'); 
 }
 
-// 💡 파라미터로 받은 검색어를 PHP로 전달
+// ==========================================
+// DB 리포트 불러오기 및 렌더링
+// ==========================================
 async function loadReportsFromDB(keyword = '') {
     try {
         const url = keyword 
@@ -283,7 +389,6 @@ async function loadReportsFromDB(keyword = '') {
     }
 }
 
-// 💡 검색어가 있을 땐 맞춤형 "검색 결과 없음" 렌더링
 function renderReports(reports, keyword = '') {
     const reportGrid = document.getElementById('reportGrid');
     reportGrid.innerHTML = ''; 
@@ -351,6 +456,8 @@ function renderReports(reports, keyword = '') {
                             <li class="menu-edit-title">제목 변경하기</li>
                             <li class="menu-edit-cover">표지 변경하기</li>
                             <li class="menu-show-details">세부사항</li>
+                            <!-- 삭제 버튼 -->
+                            <li class="menu-delete-report" style="color: #ff4d4f; font-weight: bold;">삭제</li>
                         </ul>
                     </details>
                 </div>
